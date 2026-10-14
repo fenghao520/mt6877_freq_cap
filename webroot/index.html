@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>天玑920限频</title>
+<style>
+  :root{
+    --toph:124px;
+    --bg:#0b0f16; --card:#141b26; --card2:#1d2735; --line:#3a4a60;
+    --txt:#e7edf5; --sub:#93a1b5; --mut:#6b7a8f;
+    --cy:#22c1e0; --cy2:#1ba3c0; --rd:#f0617a; --gn:#35d08a; --yl:#e8b64c;
+    --glass-bg:rgba(26,36,52,.52); --glass-line:rgba(255,255,255,.16);
+    --glass-hi:rgba(255,255,255,.22); --glass-shadow:0 14px 36px rgba(0,0,0,.44);
+    --edge-top:rgba(255,255,255,.30); --edge-side:rgba(255,255,255,.07);
+    --glow-cy:rgba(34,193,224,.16); --glow-rd:rgba(240,97,122,.10);
+    --seg-on:rgba(120,170,210,.30); --seg-txt:#dff1f8; --bg-grad:#16303f;
+    --t1:#ffffff; --t2:#a9e7f4;
+    --spring:cubic-bezier(.34,1.45,.44,1);
+    --line-soft:rgba(255,255,255,.07); --press:rgba(255,255,255,.07);
+    --rim-hi:rgba(255,255,255,.13); --rim-lo:rgba(0,0,0,.18);
+    --lpk-bg:rgba(24,33,48,.80); --mask:rgba(4,7,12,.55);
+  }
+  body[data-theme="light"]{
+    --bg:#e8eef6; --card:#eef3fa; --card2:#e4ebf5; --line:rgba(25,55,95,.12);
+    --txt:#152233; --sub:#51607a; --mut:#8391a5;
+    --cy:#0b85a5; --cy2:#0a7490; --rd:#cf3d60; --gn:#129663; --yl:#a87413;
+    --glass-bg:rgba(255,255,255,.58); --glass-line:rgba(255,255,255,.85);
+    --glass-hi:rgba(255,255,255,.95); --glass-shadow:0 14px 34px rgba(60,95,140,.20);
+    --edge-top:rgba(255,255,255,.98); --edge-side:rgba(255,255,255,.45);
+    --glow-cy:rgba(11,133,165,.12); --glow-rd:rgba(207,61,96,.08);
+    --seg-on:rgba(70,130,180,.22); --seg-txt:#0e3a52; --bg-grad:#d3e4f5;
+    --t1:#0a7490; --t2:#0b85a5;
+    --line-soft:rgba(25,55,95,.09); --press:rgba(25,55,95,.06);
+    --rim-hi:rgba(255,255,255,.95); --rim-lo:rgba(25,55,95,.10);
+    --lpk-bg:rgba(255,255,255,.88); --mask:rgba(120,140,165,.40);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;}
+  body{
+    background:
+      radial-gradient(720px 340px at 85% -8%, var(--bg-grad) 0%, transparent 62%),
+      radial-gradient(560px 300px at -12% 28%, var(--glow-cy) 0%, transparent 65%),
+      radial-gradient(520px 280px at 108% 64%, var(--glow-rd) 0%, transparent 65%),
+      var(--bg);
+    color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","MiSans","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;
+    font-size:15px; line-height:1.5;
+  }
+  .shell{position:relative;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+  .scroll{flex:1 1 auto;min-width:0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
+  .scroll::-webkit-scrollbar{width:0;height:0;}
+  .app{max-width:600px;min-width:0;margin:0 auto;
+    padding:calc(var(--toph) + 10px) 14px calc(100px + env(safe-area-inset-bottom,0px));}
+  /* 顶部悬浮磨砂条 */
+  .topbar{position:absolute;top:0;left:0;right:0;z-index:40;
+    padding:calc(14px + env(safe-area-inset-top,0px)) 14px 10px;
+    background:
+      linear-gradient(180deg,var(--glass-hi) 0%,transparent 34%) padding-box,
+      linear-gradient(var(--glass-bg),var(--glass-bg)) padding-box;
+    backdrop-filter:blur(26px) saturate(180%);-webkit-backdrop-filter:blur(26px) saturate(180%);}
+  .topbar::after{content:"";position:absolute;left:16px;right:16px;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,var(--glass-line) 18%,var(--glass-line) 82%,transparent);
+    opacity:.55;pointer-events:none;}
+  .trow1{position:relative;display:flex;align-items:center;justify-content:space-between;}
+  .logo{width:40px;height:40px;border-radius:13px;flex:0 0 auto;
+    background:linear-gradient(180deg,rgba(255,255,255,.30) 0%,transparent 45%),
+      linear-gradient(160deg,#2bc7e6,#1283a8);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 7px 20px rgba(34,193,224,.38),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 5px rgba(0,45,65,.22);}
+  .logo svg{width:23px;height:23px;}
+  @font-face{font-family:'RQBrush';src:url(data:font/woff2;base64,d09GMgABAAAAAAXEAAwAAAAACYwAAAV3AAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmAAVAqKeIkpATYCJAMQCxAABCAFgyQHIBckGBAb3gcgjtMVN4QkKVYO+dC7WW8IEiaBqdP1IDWFNedglWpCxYSuqNEzk681l4MH+Gu+ZYNXAo+/LQNsXH4qMzzdweX0/1u4gMbUd2vsaw7LxloWWJZY+P/NARTQ5MACTCwKQFuGV6cHXSTgEvfJOmTwp+L7gBHKPG7kKdWpoLGxed8HxixcBRi17+5ez2UHGtSkFpIUAAQA1YZrAyAhAIJDACK1cQAjnop2313jW3BhFbcls3t9IACgd7xX//Ka2X19pP772i4QGXQZNeL7AvmD6oHCqj69Dh2OloZmKFIaFqHmI3leDLOobaIYFBKj5UOYOjQyyDjzY5gX+xE1gkVxl+Ur4j8h3PwESg65nwoGIsCA5iqJ+eXgF9jKNsxrHCsJ0FxzFhZXYMlq0rCZBBZTWhxZpQiaOuQ1HJBVEHLnfkU5EPMjIURE5YzSBm8JxpVA6EEoQEApLxSbwwW/iSNbIkitrZpmmCc0giYoKI+6bFFWgfhLNDiCiSeQ/bnKIa+oGF7tJ7zWqBC5C2tyGJLj9pv8RCPTn/zmUiL0iEOEmy8YVmITwTxKVxACAVklCOpHvAJEQ7MfGchdxbyLVYJVTqbN3CPnHlR2cYp5vb14dUgwA5asop8neVFQhlBtDI6qQnPzBWGl+eXeuQfwpSsGKO8DKkx+clB5pZeXSHHI8grNB7J+F692qepfQgTMK8hV66KcIFMy0LmClyoGNFkq4gSVwBk3OAWnuiWiRLAvEGVppiQfg5pRca1hST6vRsqUpk6V9lr8eT6bLNvMmdMyrfNRvql6N2Mexka8IySZev0wjrFTEzJY7oZuK2NJyK/LsbJ3X7tdmivZLf1WSxaLeXwNq1V6MTFk45SNCAElAfC0U7ZvCx5LRgmmkiz9vPa+VbEhscEzezB2n7Eefz+6XeDS51+2famXf7b9o/dut0+z78vbZ/tF+WXP4ZeuGHdHnzZOPGw4Hc3YYcTBjHUz5lsjyoRpE541uH/1lTuyp2U/o9hR9cmsT6sO6R7M98J0dMTOEq4Zm6DE9J3126TyhSYGovwd/tldCH7+ObxpuuzKM9Fbf26foCo29arINp3dPWWpoZ2xSYwJp/hCXumVN9ucR+v4vN3JmZnfJf7NtszMGTC9x0cXGpmTGeMZEbMdqyyz60rrUvLK5ykb3Da4sKzwO/nb+T91hk77sqFoG2Mj9U1LnYAzGQ/7dGZTUXrU1MUTshpcxXGLHG8PenVOtO//CeH1h7/uMlgdDrNsdjiswy/+sQX9ZvwyqWvFCHj/jH3kZuyckblLDu/rSB028uch7siNA/cNk5cvnWYNVZd0hIcu7TaRqhjP4cKUE25KsXFWbdq52pRX+jrLLk+w9mjbNHrSTKfvB7e5ZnGa3XWr5Zv6bxyGv0I8DR7A82osY+wzxsoaZ8MTkNT0vKUt3lPi+t5X8D6fn4Q6A7stLXUFdb3fsIwWqusi/ihvLm/5O7V3wy67q63kUgMAAARA4IJr8KpSNuwBz3GXATi9I9cPwJmWjJGBc4GGdBy3EBBGBQAIcPH/e1DvCZCzQ0BsQERRurmkS5UjHpFQ5xxa/XwzZxfgkLQewEdwKSHCfCRR4f0m4ST7T6LW112JRmQi6GwtSyIWlVq1ma5DvVp1fMAQZ9wvTWcnqTCdZIxq9RrUa1FLUqCeT71yrSQe1XymatWhkSRXtUp1WrRq0qrWdJKxWiVLJJnEp0oyyWhNmkgmQCfAWH2KVoemqCbOdWrVZXoZyVGuZYIxCkJVXOhQiyqmwUPIraVtbwKWBIoYbqf6yhaSNMlSTzY5ZZDlG88jx+j0gWNkmMQpidsYHABA4DXMbSECf1tFwYsDO/p5NCA99FGHCdIB) format('woff2');font-display:swap;}
+  .title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    margin:0;font-size:24px;font-weight:400;letter-spacing:1px;white-space:nowrap;
+    font-family:'RQBrush',"Noto Serif CJK SC","STKaiti","KaiTi",serif;
+    background:linear-gradient(180deg,var(--t1),var(--t2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+  .trow2{display:flex;align-items:center;gap:10px;margin-top:10px;}
+  .sub{flex:1 1 auto;min-width:0;margin:0;text-align:center;font-size:11.5px;line-height:1.5;color:var(--sub);}
+  .conn{flex:0 0 auto;font-size:11px;color:var(--mut);display:flex;align-items:center;gap:5px;white-space:nowrap;}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--mut);}
+  .conn.ok{color:var(--gn);} .conn.ok .dot{background:var(--gn);box-shadow:0 0 8px var(--gn);}
+  .glass{
+    background:
+      linear-gradient(180deg,var(--glass-hi) 0%,transparent 18%) padding-box,
+      linear-gradient(var(--glass-bg),var(--glass-bg)) padding-box,
+      linear-gradient(180deg,var(--edge-top) 0%,var(--edge-side) 45%,var(--edge-side) 60%,var(--glass-hi) 100%) border-box;
+    backdrop-filter:blur(26px) saturate(180%);-webkit-backdrop-filter:blur(26px) saturate(180%);
+    border:1px solid transparent;
+    box-shadow:var(--glass-shadow), inset 0 1px 0 var(--glass-hi), inset 0 -1px 0 rgba(255,255,255,.04);}
+  .theme-btn{display:flex;align-items:center;gap:4px;flex:0 0 auto;padding:7px 10px;border-radius:12px;
+    border:none;color:var(--mut);font-size:11.5px;font-weight:600;cursor:pointer;
+    transition:transform .18s var(--spring),background .18s,color .18s;}
+  .theme-btn:active{transform:scale(.92);}
+  .theme-btn svg{width:14px;height:14px;}
+  .theme-btn.on{background:linear-gradient(180deg,rgba(255,255,255,.14),transparent 60%),var(--seg-on);
+    color:var(--seg-txt);box-shadow:inset 0 1px 0 var(--glass-hi),0 3px 10px rgba(0,0,0,.16);}
+  /* 卡片 */
+  .card{
+    background:
+      linear-gradient(180deg,var(--glass-hi) 0%,transparent 22%) padding-box,
+      linear-gradient(var(--glass-bg),var(--glass-bg)) padding-box,
+      linear-gradient(160deg,var(--edge-top) 0%,var(--edge-side) 38%,var(--edge-side) 62%,var(--glass-hi) 100%) border-box;
+    backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);
+    border:1px solid transparent;border-radius:20px;
+    padding:17px 16px;margin:12px 0;
+    box-shadow:var(--glass-shadow), inset 0 1px 0 var(--glass-hi), inset 0 -1px 0 rgba(255,255,255,.04);}
+  .card h2{font-size:15px;margin:0 0 4px;display:flex;align-items:center;gap:7px;letter-spacing:.2px;}
+  .card h2 .bar{width:4px;height:15px;border-radius:3px;
+    background:linear-gradient(180deg,var(--cy),var(--cy2));
+    box-shadow:0 0 10px var(--glow-cy),inset 0 1px 0 rgba(255,255,255,.35);}
+  .hint{font-size:12px;color:var(--sub);margin:2px 0 12px;}
+  .hint:last-child{margin-bottom:0;}
+  .subt{margin:12px 0 6px;font-size:13.5px;font-weight:600;}
+  .subt span{font-weight:400;color:var(--mut);font-size:12px;margin-left:6px;}
+  /* 槽位 / 档位按钮 */
+  .slot-label{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub);margin:14px 0 8px;}
+  .slot-label:first-of-type{margin-top:4px;}
+  .tag{background:var(--card2);border:1px solid var(--line);color:var(--sub);
+    font-size:11px;padding:2px 9px;border-radius:9px;
+    box-shadow:inset 0 1px 0 var(--rim-hi),inset 0 -1px 0 var(--rim-lo);}
+  .tag.game{color:var(--rd);border-color:rgba(240,97,122,.35);}
+  .tag.daily{color:var(--cy);border-color:rgba(34,193,224,.35);}
+  .pills{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .pill{appearance:none;border:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 55%),var(--card2);
+    color:var(--sub);padding:11px 4px;border-radius:13px;font-size:14px;font-weight:600;cursor:pointer;
+    box-shadow:inset 0 1px 0 var(--rim-hi),inset 0 -1px 0 var(--rim-lo),inset 0 -3px 6px rgba(0,0,0,.08);
+    transition:transform .18s var(--spring),box-shadow .18s,background .18s,color .18s,border-color .18s;}
+  .pill:active{transform:scale(.93);}
+  .pill.on{border-color:transparent;color:#fff;
+    background:linear-gradient(180deg,rgba(255,255,255,.30) 0%,transparent 42%),
+      linear-gradient(160deg,var(--cy),var(--cy2));
+    box-shadow:0 6px 18px rgba(34,193,224,.38),inset 0 1px 0 rgba(255,255,255,.42),inset 0 -2px 5px rgba(0,40,60,.22);}
+  .pill.fast.on{
+    background:linear-gradient(180deg,rgba(255,255,255,.30) 0%,transparent 42%),
+      linear-gradient(160deg,#f5708a,var(--rd));
+    box-shadow:0 6px 18px rgba(240,97,122,.38),inset 0 1px 0 rgba(255,255,255,.42),inset 0 -2px 5px rgba(80,0,20,.22);}
+  /* 频率表 */
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
+  th,td{padding:7px 4px;text-align:right;border-bottom:1px solid var(--line-soft);}
+  th:first-child,td:first-child{text-align:left;color:var(--sub);}
+  th{color:var(--mut);font-weight:500;font-size:11.5px;}
+  .unit{font-size:11px;color:var(--mut);margin-top:8px;line-height:1.6;}
+  #tierTable th{text-align:center;font-size:10.5px;line-height:1.35;padding:6px 2px;}
+  #tierTable th:first-child{text-align:left;}
+  #tierTable td{text-align:center;padding:5px 2px;}
+  #tierTable td:first-child{font-size:12.5px;white-space:nowrap;}
+  #tierTable select{width:100%;max-width:none;padding:6px 16px 6px 5px;font-size:11px;text-align:center;}
+  #tierTable tr.ov td:first-child{color:var(--cy);}
+  /* 开关 */
+  .row{display:flex;align-items:center;gap:12px;padding:11px 0;}
+  .row + .row{border-top:1px solid var(--line-soft);}
+  .row .ic{width:34px;height:34px;border-radius:11px;
+    background:linear-gradient(180deg,rgba(255,255,255,.07),transparent 55%),var(--card2);
+    border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.09);
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-size:16px;}
+  .row .meta{flex:1;min-width:0;}
+  .row .meta b{font-size:14.5px;font-weight:600;display:block;}
+  .row .meta span{font-size:12px;color:var(--sub);display:block;}
+  .sw{position:relative;width:50px;height:30px;flex:0 0 auto;cursor:pointer;}
+  .sw input{position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:pointer;z-index:2;}
+  .sw .track{position:absolute;inset:0;background:var(--card2);border:1px solid var(--line);
+    border-radius:20px;transition:background .22s,border-color .22s;box-shadow:inset 0 2px 5px rgba(0,0,0,.16);}
+  .sw .knob{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+    background:linear-gradient(180deg,#ffffff,#dfe7ef);transition:left .22s var(--spring);
+    box-shadow:0 2px 7px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.9);}
+  .sw input:checked + .track{
+    background:linear-gradient(180deg,rgba(255,255,255,.22) 0%,transparent 50%),
+      linear-gradient(160deg,var(--cy),var(--cy2));
+    border-color:transparent;
+    box-shadow:0 3px 12px rgba(34,193,224,.35),inset 0 1px 0 rgba(255,255,255,.30);}
+  .sw input:checked ~ .knob{left:25px;}
+  select{appearance:none;-webkit-appearance:none;background:var(--card2);border:1px solid var(--line);
+    color:var(--txt);border-radius:11px;padding:8px 26px 8px 10px;font-size:12.5px;cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='%237c8aa0' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 9px center;max-width:118px;
+    box-shadow:inset 0 1px 0 var(--rim-hi),inset 0 -1px 0 var(--rim-lo);
+    transition:border-color .18s,box-shadow .18s;}
+  select:focus{outline:none;border-color:var(--cy);box-shadow:0 0 0 3px var(--glow-cy);}
+  /* 自定义频率网格 */
+  .freq-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;}
+  .freq-cell{background:linear-gradient(180deg,rgba(255,255,255,.05),transparent 55%),var(--card2);
+    border:1px solid var(--line);border-radius:14px;padding:10px;
+    box-shadow:inset 0 1px 0 var(--rim-hi),inset 0 -1px 0 var(--rim-lo);}
+  .freq-cell label{font-size:11.5px;color:var(--sub);display:block;margin-bottom:6px;}
+  .freq-cell select{width:100%;max-width:none;padding:9px 26px 9px 10px;}
+  /* 输出型按钮 */
+  .btn{border:none;color:#fff;font-size:13px;font-weight:600;
+    padding:10px 16px;border-radius:13px;cursor:pointer;white-space:nowrap;
+    background:linear-gradient(180deg,rgba(255,255,255,.28) 0%,transparent 45%),
+      linear-gradient(160deg,#2bc7e6,#1593b3);
+    box-shadow:0 6px 16px rgba(34,193,224,.30),inset 0 1px 0 rgba(255,255,255,.40),inset 0 -2px 5px rgba(0,45,65,.20);
+    transition:transform .18s var(--spring),box-shadow .18s;}
+  .btn:active{transform:scale(.94);}
+  .btn.ghost{background:linear-gradient(180deg,rgba(255,255,255,.07),transparent 55%),var(--card2);
+    border:1px solid var(--line);color:var(--sub);
+    box-shadow:inset 0 1px 0 var(--rim-hi),inset 0 -1px 0 var(--rim-lo),inset 0 -3px 6px rgba(0,0,0,.06);}
+  .btnrow{display:flex;gap:10px;margin-top:12px;}
+  .btnrow .btn{flex:1;text-align:center;}
+  /* 操作卡（模块化大按钮） */
+  .ops{display:grid;gap:10px;margin-top:10px;}
+  .opbtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+    border:1px solid var(--line);border-radius:16px;padding:12px 14px;
+    background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 55%),var(--card2);
+    color:var(--txt);
+    box-shadow:inset 0 1px 0 var(--rim-hi),inset 0 -1px 0 var(--rim-lo),inset 0 -3px 6px rgba(0,0,0,.08);
+    transition:transform .18s var(--spring),box-shadow .18s,background .18s;}
+  .opbtn:active{transform:scale(.975);}
+  .opbtn .oi{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    flex:0 0 auto;background:linear-gradient(180deg,rgba(255,255,255,.08),transparent 55%),var(--card);
+    border:1px solid var(--line);color:var(--cy);}
+  .opbtn .oi svg{width:18px;height:18px;}
+  .opbtn .ot{flex:1;min-width:0;}
+  .opbtn .ot b{display:block;font-size:14px;font-weight:600;}
+  .opbtn .ot i{display:block;font-size:11.5px;color:var(--sub);font-style:normal;line-height:1.45;}
+  .opbtn .ar{color:var(--mut);flex:0 0 auto;font-size:15px;}
+  .opbtn.prime{border-color:transparent;color:#fff;
+    background:linear-gradient(180deg,rgba(255,255,255,.28) 0%,transparent 45%),
+      linear-gradient(160deg,#2bc7e6,#1593b3);
+    box-shadow:0 6px 16px rgba(34,193,224,.30),inset 0 1px 0 rgba(255,255,255,.40),inset 0 -2px 5px rgba(0,45,65,.20);}
+  .opbtn.prime .oi{background:rgba(255,255,255,.18);border-color:transparent;color:#fff;}
+  .opbtn.prime .ot i{color:rgba(255,255,255,.88);}
+  .opbtn.prime .ar{color:rgba(255,255,255,.9);}
+  .opbtn.danger .oi{color:var(--rd);border-color:rgba(240,97,122,.32);}
+  .opbtn.warn .oi{color:var(--yl);border-color:rgba(232,182,76,.32);}
+  /* 状态行 */
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;font-size:13.5px;}
+  .kv + .kv{border-top:1px solid var(--line-soft);}
+  .kv .k{color:var(--sub);flex:0 0 auto;}
+  .kv .v{font-weight:600;text-align:right;min-width:0;font-variant-numeric:tabular-nums;word-break:break-all;}
+  .badge{padding:2px 10px;border-radius:9px;font-size:12px;font-weight:600;display:inline-block;
+    white-space:nowrap;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.10);}
+  .badge.on{background:rgba(53,208,138,.15);color:var(--gn);box-shadow:inset 0 0 0 1px rgba(53,208,138,.28),inset 0 1px 0 rgba(255,255,255,.10);}
+  .badge.off{background:rgba(240,97,122,.15);color:var(--rd);box-shadow:inset 0 0 0 1px rgba(240,97,122,.28),inset 0 1px 0 rgba(255,255,255,.10);}
+  .badge.warn{background:rgba(232,182,76,.15);color:var(--yl);box-shadow:inset 0 0 0 1px rgba(232,182,76,.28),inset 0 1px 0 rgba(255,255,255,.10);}
+  .badge.game{background:rgba(232,182,76,.15);color:var(--yl);box-shadow:inset 0 0 0 1px rgba(232,182,76,.28),inset 0 1px 0 rgba(255,255,255,.10);}
+  .badge.daily{background:rgba(34,193,224,.15);color:var(--cy);box-shadow:inset 0 0 0 1px rgba(34,193,224,.28),inset 0 1px 0 rgba(255,255,255,.10);}
+  /* 深睡页 */
+  .sect{margin:14px 0 4px;font-size:13px;font-weight:600;color:var(--cy);
+    display:flex;align-items:center;gap:7px;}
+  .sect:first-child{margin-top:2px;}
+  .sect .cnt{margin-left:auto;font-size:11px;font-weight:500;color:var(--mut);}
+  .approw{display:flex;align-items:center;gap:10px;padding:9px 0;}
+  .approw + .approw{border-top:1px solid var(--line-soft);}
+  .approw .nm{flex:1 1 auto;min-width:0;}
+  .approw .nm b{display:block;font-size:13.5px;font-weight:600;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .approw .nm span{display:block;font-size:11px;color:var(--mut);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .approw .badge{flex:0 0 auto;font-size:11px;padding:3px 9px;}
+  .mini{flex:0 0 auto;appearance:none;border:1px solid var(--line);background:var(--card2);
+    color:var(--txt);font-size:11.5px;font-weight:600;padding:6px 11px;border-radius:10px;cursor:pointer;
+    transition:transform .16s var(--spring),background .16s,color .16s;}
+  .mini:active{transform:scale(.93);}
+  .mini.warn{color:var(--rd);border-color:rgba(240,97,122,.35);}
+  .mini.go{color:var(--seg-txt);}
+  .search{width:100%;box-sizing:border-box;margin:2px 0 8px;padding:10px 12px;border-radius:12px;
+    border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:13px;outline:none;
+    transition:border-color .16s,box-shadow .16s;}
+  .search:focus{border-color:var(--cy);box-shadow:0 0 0 3px var(--glow-cy);}
+  .search::placeholder{color:var(--mut);}
+  .rank{flex:0 0 auto;width:24px;height:24px;border-radius:9px;display:flex;
+    align-items:center;justify-content:center;font-size:11.5px;font-weight:700;
+    color:var(--mut);background:var(--card2);border:1px solid var(--line-soft);}
+  .rank.hot{color:#fff;background:linear-gradient(160deg,var(--rd),#b93a55);border-color:transparent;
+    box-shadow:0 2px 8px var(--glow-rd);}
+  .empty{font-size:12px;color:var(--mut);padding:9px 0;line-height:1.6;}
+  /* 关于 */
+  .about h3{font-size:13.5px;margin:14px 0 4px;color:var(--cy);}
+  .about p{font-size:12.5px;color:var(--sub);margin:6px 0;line-height:1.7;}
+  .about ul{font-size:12.5px;color:var(--sub);margin:6px 0;padding-left:20px;line-height:1.7;}
+  .about li{margin:5px 0;}
+  .about code{font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    font-size:11.5px;background:var(--card2);border:1px solid var(--line-soft);
+    border-radius:6px;padding:1px 5px;word-break:break-all;}
+  /* 底部玻璃坞 */
+  .tabbar{position:absolute;z-index:50;left:50%;transform:translateX(-50%);
+    width:min(572px,calc(100% - 28px));
+    bottom:calc(12px + env(safe-area-inset-bottom,0px));
+    border-radius:24px;
+    background:
+      linear-gradient(180deg,var(--glass-hi) 0%,transparent 30%) padding-box,
+      linear-gradient(var(--glass-bg),var(--glass-bg)) padding-box,
+      linear-gradient(180deg,var(--edge-top) 0%,var(--edge-side) 55%,var(--glass-hi) 100%) border-box;
+    backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);
+    border:1px solid transparent;
+    box-shadow:var(--glass-shadow),inset 0 1px 0 var(--glass-hi);
+    padding:6px 6px;display:grid;grid-template-columns:repeat(5,1fr);}
+  .tab{background:none;border:none;color:var(--mut);font-size:11px;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:17px;
+    transition:transform .18s var(--spring),background .22s,color .22s;}
+  .tab:active{transform:scale(.90);}
+  .tab svg{width:21px;height:21px;}
+  .tab.on{color:var(--seg-txt);
+    background:linear-gradient(180deg,rgba(255,255,255,.14),transparent 60%),var(--seg-on);
+    box-shadow:inset 0 1px 0 var(--glass-hi),0 3px 10px rgba(0,0,0,.16);}
+  .tab.on svg{filter:drop-shadow(0 0 6px var(--glow-cy));}
+  .page{display:none;}
+  .page.on{display:block;animation:pgIn .3s ease-out;}
+  @keyframes pgIn{from{opacity:0;transform:translateY(8px);}}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  /* 自绘液态选择器 */
+  .lpk-mask{position:fixed;inset:0;z-index:70;background:var(--mask);
+    opacity:0;pointer-events:none;transition:opacity .22s ease-out;}
+  .lpk-mask.on{opacity:1;pointer-events:auto;}
+  .lpk{position:absolute;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));
+    width:min(520px,calc(100% - 28px));max-height:62vh;
+    display:flex;flex-direction:column;border-radius:26px;overflow:hidden;
+    background:
+      linear-gradient(180deg,var(--glass-hi) 0%,transparent 22%) padding-box,
+      linear-gradient(var(--lpk-bg),var(--lpk-bg)) padding-box,
+      linear-gradient(180deg,var(--edge-top) 0%,var(--edge-side) 46%,var(--edge-side) 60%,var(--glass-hi) 100%) border-box;
+    backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);
+    border:1px solid transparent;
+    box-shadow:var(--glass-shadow),inset 0 1px 0 var(--glass-hi);
+    opacity:0;pointer-events:none;
+    transform:translateX(-50%) translateY(48px) scale(.96);
+    transition:transform .36s var(--spring),opacity .2s ease-out;}
+  .lpk-mask.on .lpk{opacity:1;pointer-events:auto;transform:translateX(-50%);}
+  .lpk-grab{flex:0 0 auto;width:38px;height:5px;border-radius:3px;margin:9px auto 3px;background:var(--mut);opacity:.45;}
+  .lpk-list{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 8px 12px;}
+  .lpk-list::-webkit-scrollbar{width:0;height:0;}
+  .lpk-item{position:relative;display:flex;align-items:center;gap:10px;
+    padding:13px 12px;font-size:14.5px;color:var(--txt);border-radius:14px;cursor:pointer;
+    transition:background .15s,transform .15s var(--spring);}
+  .lpk-item + .lpk-item::before{content:"";position:absolute;top:0;left:14px;right:14px;height:1px;background:var(--line-soft);}
+  .lpk-item:active{background:var(--press);transform:scale(.98);}
+  .lpk-item.sel{color:var(--seg-txt);font-weight:600;}
+  .lpk-dot{width:8px;height:8px;border-radius:50%;margin-left:auto;flex:0 0 auto;
+    background:linear-gradient(160deg,var(--cy),var(--cy2));
+    box-shadow:0 0 9px var(--glow-cy),inset 0 1px 0 rgba(255,255,255,.5);
+    opacity:0;transform:scale(.3);transition:.2s var(--spring);}
+  .lpk-item.sel .lpk-dot{opacity:1;transform:scale(1);}
+  .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));
+    transform:translateX(-50%) translateY(20px) scale(.92);
+    background:
+      linear-gradient(180deg,var(--glass-hi) 0%,transparent 40%) padding-box,
+      linear-gradient(var(--glass-bg),var(--glass-bg)) padding-box,
+      linear-gradient(180deg,var(--edge-top),var(--edge-side)) border-box;
+    backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+    border:1px solid transparent;color:var(--txt);padding:10px 18px;border-radius:16px;
+    box-shadow:var(--glass-shadow),inset 0 1px 0 var(--glass-hi);
+    font-size:13px;opacity:0;transition:.28s var(--spring);z-index:80;max-width:88%;text-align:center;
+    /* 关键：toast 只是提示，绝不能吃点击。
+       否则它淡出后仍保留上一次文案的尺寸，会在屏幕正中形成一条看不见的
+       「点击死区」——正好压住「均衡 / 性能」两个档位按钮，表现为点了没反应。 */
+    pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+</style>
+</head>
+<body data-theme="dark">
+<div class="shell">
+  <div class="topbar">
+    <div class="trow1">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 13l3-6 4 8 3-5 2 3h6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h1 class="title">天玑920限频</h1>
+      <button type="button" class="theme-btn glass on" id="theme-btn">
+        <svg id="th-ic" viewBox="0 0 24 24" fill="none"><path d="M20 13.5A8 8 0 1 1 10.5 4 6.6 6.6 0 0 0 20 13.5z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>
+        <span id="th-txt">夜间</span>
+      </button>
+    </div>
+    <div class="trow2">
+      <p class="sub">MTK PPM 原生通道 · 只压 CPU 最高频率<br>改编自 ynltoto「若晴官调限频 v4.4」</p>
+      <div class="conn" id="conn"><span class="dot"></span><span id="connTxt">连接中</span></div>
+    </div>
+  </div>
+
+  <main class="scroll"><div class="app">
+
+    <!-- ============ 模式 ============ -->
+    <div class="page on" id="p-mode">
+      <div class="card">
+        <h2><span class="bar"></span>运行状态</h2>
+        <div id="stateBody"><div class="kv"><span class="k">读取中…</span><span class="v">-</span></div></div>
+      </div>
+      <div class="card">
+        <h2><span class="bar"></span>全局模式</h2>
+        <div class="hint">日用与游戏两套互不影响，点选后 1~3 秒内生效；游戏场景按包名名单自动识别。</div>
+        <div class="slot-label"><span class="tag daily">日用</span>非游戏场景（桌面 / 社交 / 视频…）</div>
+        <div class="pills" id="pills-daily"></div>
+        <div class="slot-label"><span class="tag game">游戏</span>识别到名单内应用 / 横屏游戏</div>
+        <div class="pills" id="pills-game"></div>
+        <div class="hint" id="modeNote"></div>
+      </div>
+    </div>
+
+    <!-- ============ 频率 ============ -->
+    <div class="page" id="p-freq">
+      <div class="card">
+        <h2><span class="bar"></span>全局自定义频率</h2>
+        <div class="row">
+          <div class="ic">⚙️</div>
+          <div class="meta"><b>启用自定义</b><span>开启后覆盖档位表，两个场景全局生效</span></div>
+          <label class="sw"><input type="checkbox" id="sw-cuen"><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="freq-grid" id="freqGrid">
+          <div class="freq-cell"><label>日用 · 小核 A55</label><select id="f-ld"></select></div>
+          <div class="freq-cell"><label>日用 · 大核 A78</label><select id="f-bd"></select></div>
+          <div class="freq-cell"><label>游戏 · 小核 A55</label><select id="f-lg"></select></div>
+          <div class="freq-cell"><label>游戏 · 大核 A78</label><select id="f-bg"></select></div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="cust-save">保存并立即生效</button>
+          <button class="btn ghost" id="cust-reset">恢复默认</button>
+        </div>
+        <div class="unit">单位 MHz。<b>不限</b> = 该簇完全放开（模块写 -1，规避内核把 0 当最低频的坑）。
+          优先级：<b>自定义 &gt; 档位覆盖 &gt; 内置预设</b>。</div>
+      </div>
+      <div class="card">
+        <h2><span class="bar"></span>档位表</h2>
+        <div class="hint">点任意一格即可改该档位的上限；改动只影响所选频率点，选「默认」即回到内置预设。</div>
+        <table id="tierTable">
+          <thead><tr><th>档位</th><th>日用<br>小核</th><th>日用<br>大核</th><th>游戏<br>小核</th><th>游戏<br>大核</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="btnrow">
+          <button class="btn ghost" id="tier-reset">全部恢复默认</button>
+        </div>
+        <div class="unit" id="tierNote">单位 MHz · 小核可选 500~2000，大核可选 650~2500，非标准值内核会自动向下对齐。</div>
+      </div>
+    </div>
+
+    <!-- ============ 深睡 ============ -->
+    <div class="page" id="p-ds">
+      <div class="card">
+        <h2><span class="bar"></span>深度睡眠</h2>
+        <div class="row">
+          <div class="ic">🌙</div>
+          <div class="meta"><b>深度睡眠</b><span id="dsSub">熄屏 20 秒未充电时自动进入</span></div>
+          <label class="sw"><input type="checkbox" id="sw-ds"><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="hint">熄屏后让系统尽快进入深度休眠，压低待机功耗。白名单内的应用照常工作；来电、短信、闹钟不受影响；正在放音时不会进入。亮屏或充电立即还原。</div>
+        <div class="hint" id="dsStatus" style="display:none"></div>
+      </div>
+
+      <div id="dsBody" style="display:none">
+        <div class="card">
+          <h2><span class="bar"></span>白名单</h2>
+          <div class="hint">深睡期间这些应用照常工作。名单里未安装的包会被忽略，所以可以放心留着。</div>
+          <div id="dsWhite"></div>
+        </div>
+        <div class="card">
+          <h2><span class="bar"></span>添加应用</h2>
+          <input class="search" id="dsSearch" placeholder="搜索应用名称或包名…">
+          <div id="dsApps"></div>
+        </div>
+        <div class="card">
+          <h2><span class="bar"></span>唤醒排行</h2>
+          <div class="hint">上一次深睡期间最活跃的应用。优先按「真正唤醒设备」的次数排；若整段深睡无人真正唤醒（说明深睡很干净），则改按闹钟触发次数排。加白越多省电越少，只给真正需要的加。</div>
+          <div id="dsWake"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 安全 ============ -->
+    <div class="page" id="p-safe">
+      <div class="card">
+        <h2><span class="bar"></span>快捷操作</h2>
+        <div class="ops">
+          <button class="opbtn prime" id="op-restore">
+            <span class="oi"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 0 2.6-5.9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M4 4v4.5h4.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="ot"><b>立即恢复不限</b><i>两簇上限写回 -1 并保持放开，点任一档位即重新接管</i></span>
+            <span class="ar">›</span>
+          </button>
+          <button class="opbtn" id="op-toggle">
+            <span class="oi"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+            <span class="ot"><b id="tgTitle">停用限频</b><i id="tgDesc">持久停用（熄屏也不限频），随时可再开</i></span>
+            <span class="ar">›</span>
+          </button>
+          <button class="opbtn" id="op-restart">
+            <span class="oi"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4a8 8 0 1 1-7.4 5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M3 5.5V10h4.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="ot"><b>重启守护</b><i>守护无响应或状态卡住时用</i></span>
+            <span class="ar">›</span>
+          </button>
+          <button class="opbtn danger" id="op-stop">
+            <span class="oi"><svg viewBox="0 0 24 24" fill="none"><path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+            <span class="ot"><b>停守护并恢复</b><i>彻底退出限频（重启手机后模块会再次启动）</i></span>
+            <span class="ar">›</span>
+          </button>
+        </div>
+      </div>
+      <div class="card about">
+        <h2><span class="bar"></span>四层恢复方案</h2>
+        <p><b>① 本页</b>「立即恢复不限」→ 两簇写回 -1 并保持放开（守护仍在跑，点任一档位即重新接管）；「停用限频」→ 持久停用。</p>
+        <p><b>② 模块级</b> KSU 管理器里移除本模块并重启 → <code>uninstall.sh</code> 自动把两簇写回 -1。</p>
+        <p><b>③ 全局级</b> 新建 <code>/data/adb/modules/.disable_modules</code> 后重启 → 禁用全部模块。</p>
+        <p><b>④ ADB 手动</b></p>
+        <p><code>adb shell su -c "echo -1 &gt; /proc/ppm/policy/cluster_0_max_freq; echo -1 &gt; /proc/ppm/policy/cluster_1_max_freq"</code></p>
+        <p>本模块<b>只做运行时 /proc 写入，不动 boot 分区</b>，重启即自动清空全部限制，因此不存在刷入后无法开机的情况。</p>
+      </div>
+    </div>
+
+    <!-- ============ 关于 ============ -->
+    <div class="page" id="p-about">
+      <div class="card about">
+        <h2><span class="bar"></span>关于</h2>
+        <div class="kv"><span class="k">模块</span><span class="v">天玑920限频</span></div>
+        <div class="kv"><span class="k">版本</span><span class="v" id="ab-ver">v1.2.3</span></div>
+        <div class="kv"><span class="k">目标 SoC</span><span class="v">MT6877 天玑920</span></div>
+        <div class="kv"><span class="k">控制通道</span><span class="v">/proc/ppm/policy/*</span></div>
+        <div class="kv"><span class="k">配置目录</span><span class="v">/sdcard/Android/<br>mt6877_freq_cap</span></div>
+        <h3>工作原理</h3>
+        <p>守护每 3 秒（熄屏 12 秒；开启深睡后熄屏也是 3 秒）巡检一次前台应用，判定 <b>日用 / 游戏</b> 场景后，把该场景所选档位对应的频率上限写进 MTK PPM 节点
+          <code>cluster_0_max_freq</code>（A55 小核）、<code>cluster_1_max_freq</code>（A78 大核）。</p>
+        <p>只限制<b>最高频率</b>，不碰 governor、不锁频、不改调度策略——系统该降就降、该升就升，相当于把天花板压下来。</p>
+        <h3>深度睡眠（v1.2.0 新增）</h3>
+        <p>熄屏且<b>未充电、未放音</b>并持续 <b>20 秒</b>后，接管系统 Doze：把白名单应用加进系统白名单、
+          其余用户应用移出，并写入更短的 <code>device_idle_constants</code>，然后 <code>force-idle</code>
+          直接进入深度休眠。亮屏、插电或放音<b>立即逐项还原</b>。</p>
+        <p>只收窄「用户级」白名单，系统自带的来电 / 短信 / 闹钟 / IMS 条目一律不动。接管前会把原值与改动清单
+          落盘，守护被杀、模块卸载、重新开机都会照它补还原，不会残留系统状态。</p>
+        <h3>约定</h3>
+        <ul>
+          <li>写入用 <b>kHz</b>；<b>写 0 会被内核解释成最低档</b>，所以「不限」必须写 <code>-1</code>，模块已在底层代转。</li>
+          <li>节点<b>读回的是该簇 OPP 表的降序索引</b>：A55 = 0~15 对应 2000~500 MHz，A78 = 0~15 对应 2500~650 MHz（-1 = 不限）。守护已换算成 MHz 显示。</li>
+          <li>熄屏自动放开限频，亮屏后按当前场景重新接管。</li>
+          <li>开机后前 100 秒按「极速」跑，避免开机卡顿（只认系统开机时长，WebUI 重启守护不会触发）。</li>
+          <li>游戏名单：<code>config/games.list</code>（内置）；漏掉的游戏把包名按行写进 <code>/sdcard/Android/mt6877_freq_cap/mygames.list</code> 即可。</li>
+        </ul>
+        <h3>致谢</h3>
+        <p>界面与思路参考 <b>ynltoto</b> 的「若晴官调限频 v4.4」；本模块是它在 MT6877 上的移植实现，
+           全部脚本与 WebUI 均为重写，<code>config/games.list</code> 与 <code>sepolicy.rule</code> 沿用原作。</p>
+      </div>
+    </div>
+
+  </div></main>
+
+  <nav class="tabbar">
+    <button class="tab on" data-p="p-mode">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="16" cy="7" r="2" stroke="currentColor" stroke-width="1.9"/><circle cx="10" cy="12" r="2" stroke="currentColor" stroke-width="1.9"/><circle cx="18" cy="17" r="2" stroke="currentColor" stroke-width="1.9"/></svg>
+      <span>模式</span>
+    </button>
+    <button class="tab" data-p="p-freq">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 14l3-6 3 8 3-9 3 7 3-5 3 3" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>频率</span>
+    </button>
+    <button class="tab" data-p="p-ds">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M20 13.5A8 8 0 1 1 10.5 4 6.6 6.6 0 0 0 20 13.5z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>
+      <span>深睡</span>
+    </button>
+    <button class="tab" data-p="p-safe">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.2-2.9 7.7-7 9-4.1-1.3-7-4.8-7-9V6l7-3z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M9.2 12.2l2 2 3.6-3.9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>安全</span>
+    </button>
+    <button class="tab" data-p="p-about">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.2" stroke="currentColor" stroke-width="1.9"/><path d="M12 11v5.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="7.9" r="1.15" fill="currentColor"/></svg>
+      <span>关于</span>
+    </button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== KernelSU / APatch 桥接（经典回调，兼容性最好） =====
+   桥接层对「并发 exec」很敏感：同一时刻发多个请求会出现随机超时/丢回调，
+   表现为「点了按钮没反应」。所以这里加两道保险：
+     ① 全局串行队列 —— 任何时刻只允许一个 exec 在飞，后来的排队；
+     ② 失败自动重试一次 —— 把偶发超时压到几乎为零。 */
+let __execChain=Promise.resolve();
+function ksuExecOnce(command){
+  return new Promise(resolve=>{
+    try{
+      if(typeof ksu!=='undefined' && ksu && typeof ksu.exec==='function'){
+        const id='cb_'+Date.now().toString(36)+Math.random().toString(36).slice(2);
+        let done=false;
+        const to=setTimeout(()=>{if(!done){done=true;resolve({errno:-1,stdout:'',stderr:'timeout'});}},10000);
+        window[id]=(errno,stdout,stderr)=>{
+          if(!done){done=true;clearTimeout(to);
+            try{delete window[id];}catch(e){window[id]=undefined;}
+            resolve({errno:(errno===undefined||errno===null)?0:errno,stdout:stdout||'',stderr:stderr||''});}
+        };
+        ksu.exec(command, JSON.stringify({cwd:'/'}), id);
+      } else resolve({errno:-1,stdout:'',stderr:'no bridge'});
+    }catch(e){resolve({errno:-1,stdout:'',stderr:String(e)});}
+  });
+}
+/* 串行化：把每个请求接到上一条尾巴上，前一条结束才发下一条 */
+function ksuExecRaw(command){
+  const run=()=>ksuExecOnce(command);
+  const p=__execChain.then(run,run);
+  __execChain=p.then(()=>{},()=>{});   // 队列自身永不 reject，避免断链
+  return p;
+}
+async function ksuExec(command){
+  let r=await ksuExecRaw(command);
+  if(r.errno!==0){                     // 偶发失败/超时：重试一次
+    await new Promise(s=>setTimeout(s,120));
+    r=await ksuExecRaw(command);
+  }
+  return r;
+}
+const isOk=r=>!!r&&(r.errno===0||r.errno==='0');
+async function sh(cmd){const r=await ksuExec(cmd);return (r.stdout||'')+'';}
+
+const D='/sdcard/Android/mt6877_freq_cap';
+const CMD=D+'/cmd', STATEF=D+'/state.conf', MODEF=D+'/mode.conf',
+      CUSTOMF=D+'/custom_freq.conf', TIERF=D+'/tier_freq.conf';
+
+const MODES=[['powersave','省电'],['balance','均衡'],['performance','性能'],['fast','极速']];
+const MODE_CN={powersave:'省电',balance:'均衡',performance:'性能',fast:'极速'};
+
+/* 内置预设（与 presets/MT6877.conf 完全一致，单位 kHz） */
+const PRESET={
+  powersave:  {LITTLE_DAILY:1150000,BIG_DAILY:1540000,LITTLE_GAME:1310000,BIG_GAME:1800000},
+  balance:    {LITTLE_DAILY:1407000,BIG_DAILY:1800000,LITTLE_GAME:1600000,BIG_GAME:2000000},
+  performance:{LITTLE_DAILY:1600000,BIG_DAILY:2000000,LITTLE_GAME:1800000,BIG_GAME:2275000},
+  fast:       {LITTLE_DAILY:1800000,BIG_DAILY:2275000,LITTLE_GAME:2000000,BIG_GAME:2500000}
+};
+/* 本机真实可选频点（scaling_available_frequencies） */
+const OPP_LITTLE=[500000,650000,740000,900000,980000,1053000,1150000,1260000,1310000,1407000,1503000,1600000,1703000,1800000,1903000,2000000];
+const OPP_BIG=[650000,740000,910000,1040000,1140000,1300000,1430000,1540000,1660000,1800000,1900000,2000000,2150000,2275000,2400000,2500000];
+const CELLS=[['LITTLE_DAILY','小核'],['BIG_DAILY','大核'],['LITTLE_GAME','小核'],['BIG_GAME','大核']];
+const CELL_OPP={LITTLE_DAILY:OPP_LITTLE,BIG_DAILY:OPP_BIG,LITTLE_GAME:OPP_LITTLE,BIG_GAME:OPP_BIG};
+
+const mhz=k=>((k/1000)%1===0?(k/1000):(k/1000).toFixed(1))+'';
+const fmtN=k=>k===''||k===undefined?'-':mhz(Number(k));
+
+function parseKv(txt){
+  const o={};
+  (txt||'').split('\n').forEach(l=>{
+    const i=l.indexOf('=');if(i>0)o[l.slice(0,i).trim()]=l.slice(i+1).trim();
+  });
+  return o;
+}
+function opt(v,label){const e=document.createElement('option');e.value=v;e.textContent=label;return e;}
+/* ===== 命令下发 =====
+   返回「是否真的写进 cmd 文件」。失败必须让调用方知道，
+   否则会出现「弹了『已切换』但机器没反应」的假成功。 */
+/* 指令白名单：cmd 最终会拼进 shell 的 `echo '<cmd>' >> file`，
+   一旦内容里出现单引号就能截断引号、拼出任意命令（以 root 执行）。
+   正常指令只由「固定关键字 + 包名」组成，包名字符集是 [A-Za-z0-9_.]，
+   所以这里用白名单兜底，宁可拒绝也不冒险。 */
+const CMD_SAFE=/^[A-Za-z0-9_=.,+-]+$/;
+async function send(cmd){
+  if(!CMD_SAFE.test(cmd)){ console.warn('拒绝下发非法指令: '+cmd); return false; }
+  const r=await ksuExec("echo '"+cmd+"' >> "+CMD);
+  return isOk(r);
+}
+/* 带反馈的下发：成功→onOk，失败→提示重试，期间按钮禁用防连点 */
+async function dispatch(btn,cmd,okMsg,retryMs){
+  if(btn&&btn.dataset.busy)return false;
+  if(btn)btn.dataset.busy='1';
+  let good=false;
+  try{ good=await send(cmd); } finally { if(btn)delete btn.dataset.busy; }
+  if(good){ toast(okMsg); setTimeout(refresh,retryMs||900); }
+  else toast('下发失败，请再点一次');
+  return good;
+}
+
+/* ===== 状态 ===== */
+let __md='balance',__mg='fast',__dis=false,__running=false,__connFail=0;
+let __lastState='';   // 最近一次成功读到的 state.conf（读取偶发失败时用它兜底，页面不闪「未运行」）
+/* 深度睡眠 */
+let __ds=false,__dsact=false,__dswhite='',__dsw='',__dswunit='alarm',__dsgrace=20,__apps=null,__appsTs=0;
+function renderState(o){
+  const box=document.getElementById('stateBody');
+  const nowSec=(Date.now()/1000)|0;
+  const fresh=o.ts&&(nowSec-Number(o.ts))<60;
+  const running=!!o.daemon&&fresh;
+  const dis=o.disabled==='1';
+  const released=!dis&&running&&o.screen==='on'&&o.c0_now==='-1'&&o.c1_now==='-1';
+  __dis=dis;__running=running;
+  __ds=o.ds==='1';__dsact=o.dsactive==='1';
+  __dswhite=o.dswhite||'';__dsw=o.dsw||'';
+  if(o.dswunit==='wake'||o.dswunit==='alarm')__dswunit=o.dswunit;
+  {const g=Number(o.dsgrace);if(g>=5)__dsgrace=g;}
+  // 偶发一次读取失败不立刻翻脸（WebUI 的 exec 有随机超时），连续 3 次才显示未连接
+  if(!o.ts){ __connFail++; if(__connFail>=3) setConn(false); }
+  else { __connFail=0; setConn(true); }
+
+  if(!o.ts){
+    box.innerHTML='<div class="kv"><span class="k">守护</span><span class="v"><span class="badge off">未运行</span></span></div>'+
+      '<div class="kv"><span class="k">说明</span><span class="v" style="font-weight:500;color:var(--sub)">读不到状态文件，点「安全 → 重启守护」</span></div>';
+    return;
+  }
+  let h='';
+  h+=kv('守护', running?'<span class="badge on">运行中</span>':'<span class="badge off">未运行</span>');
+  h+=kv('总开关', dis?'<span class="badge warn">已停用</span>'
+                 :(released?'<span class="badge warn">已放开</span>':'<span class="badge on">启用</span>'));
+  h+=kv('屏幕', o.screen==='on'?'亮':'灭 <span style="color:var(--mut);font-weight:500">（已放开）</span>');
+  h+=kv('前台应用', (o.fg||'-').replace(/&/g,'&amp;').replace(/</g,'&lt;'));
+  h+=kv('场景', o.scene==='game'?'<span class="badge game">游戏</span>':'<span class="badge daily">日用</span>');
+  h+=kv('档位', MODE_CN[o.mode]||o.mode||'-');
+  h+=kv('小核 A55 上限', limFreq(o,'c0'));
+  h+=kv('大核 A78 上限', limFreq(o,'c1'));
+  h+=kv('实时频率', fmtN(o.c0_cur)+' / '+fmtN(o.c1_cur)+' <span style="color:var(--mut);font-weight:500">MHz</span>');
+  box.innerHTML=h;
+
+  const tg=document.getElementById('tgTitle'),td=document.getElementById('tgDesc');
+  if(dis){tg.textContent='恢复限频';td.textContent='重新启用按场景/档位限制';}
+  else{tg.textContent='停用限频';td.textContent='持久停用（熄屏也不限频），随时可再开';}
+}
+function kv(k,v){return '<div class="kv"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';}
+/* 上限显示：节点读回的是 OPP 降序索引，守护已换算成 kHz 写进 c0_hz/c1_hz；
+   老版本状态文件没有该字段时回退用 target */
+function limFreq(o,pre){
+  if(o[pre+'_now']==='-1')return '不限';
+  const hz=o[pre+'_hz'], tg=o[pre+'_target'];
+  const v=(hz&&/^\d+$/.test(hz))?hz:(tg&&tg!=='0'?tg:'');
+  return v?fmtN(v)+' MHz':'未知';
+}
+function setConn(ok){
+  const c=document.getElementById('conn');
+  c.classList.toggle('ok',!!ok);
+  document.getElementById('connTxt').textContent=ok?'已连接':'未连接';
+}
+
+/* ===== 档位按钮 ===== */
+function buildPills(){
+  [['pills-daily','daily'],['pills-game','game']].forEach(([id,slot])=>{
+    const box=document.getElementById(id);box.innerHTML='';
+    MODES.forEach(([m,cn])=>{
+      const b=document.createElement('button');
+      b.className='pill'+(m==='fast'?' fast':'');
+      b.textContent=cn;b.dataset.mode=m;b.dataset.slot=slot;
+      /* 即使点的就是当前档位，也照样下发一次 —— 守护收到 mode_* 会无条件重新接管
+         （对应「立即恢复不限」之后的「点任一档位即重新接管」） */
+      b.onclick=()=>dispatch(b,'mode_'+slot+'='+m,'已切换'+(slot==='daily'?'日用':'游戏')+'：'+cn,900);
+      box.appendChild(b);
+    });
+  });
+}
+function markPills(){
+  [['pills-daily',__md],['pills-game',__mg]].forEach(([id,cur])=>{
+    [].forEach.call(document.getElementById(id).children,b=>b.classList.toggle('on',b.dataset.mode===cur));
+  });
+}
+
+/* ===== 档位表 ===== */
+let __tier={};
+function buildTierTable(){
+  const tb=document.querySelector('#tierTable tbody');tb.innerHTML='';
+  Object.keys(PRESET).forEach(mode=>{
+    const tr=document.createElement('tr');tr.id='tr-'+mode;
+    const td0=document.createElement('td');td0.textContent=MODE_CN[mode];tr.appendChild(td0);
+    CELLS.forEach(([key,cn])=>{
+      const td=document.createElement('td');
+      const sel=document.createElement('select');
+      sel.dataset.mode=mode;sel.dataset.key=key;
+      sel.onchange=()=>tierChanged(sel);
+      td.appendChild(sel);tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+  fillTierSelects();
+}
+function fillTierSelects(){
+  document.querySelectorAll('#tierTable select').forEach(sel=>{
+    const mode=sel.dataset.mode,key=sel.dataset.key;
+    const def=PRESET[mode][key];
+    const cur=__tier[(mode+'_'+key).toUpperCase()];
+    sel.innerHTML='';
+    sel.appendChild(opt('','默认 '+(def/1000)+''));
+    CELL_OPP[key].forEach(f=>sel.appendChild(opt(''+f,mhz(f)+' MHz')));
+    sel.value=cur!==undefined&&cur!==''?''+cur:'';
+    if(sel.selectedIndex<0)sel.value='';
+  });
+  markTierRows();
+}
+function markTierRows(){
+  Object.keys(PRESET).forEach(mode=>{
+    const tr=document.getElementById('tr-'+mode);
+    if(!tr)return;
+    const any=CELLS.some(([key])=>{
+      const v=__tier[(mode+'_'+key).toUpperCase()];
+      return v!==undefined&&v!==''&&Number(v)!==PRESET[mode][key];
+    });
+    tr.classList.toggle('ov',any);
+  });
+  const n=Object.keys(__tier).filter(k=>__tier[k]).length;
+  document.getElementById('tierNote').textContent='单位 MHz · 小核可选 500~2000，大核可选 650~2500'
+    +(n?(' · 当前有 '+n+' 项自定义覆盖'):' · 当前全部使用内置预设');
+}
+async function tierChanged(sel){
+  const k=(sel.dataset.mode+'_'+sel.dataset.key).toUpperCase();
+  if(sel.value==='')delete __tier[k];else __tier[k]=sel.value;
+  markTierRows();
+  await saveTier();
+  toast(sel.value===''?'已恢复该格默认':'已改为 '+mhz(Number(sel.value))+' MHz');
+}
+function tierBody(){
+  let s='# 档位覆盖表（单位 kHz）· 由 WebUI 写入，缺省项 = 用内置预设表\n'+
+        '# 键名必须全大写：<档位>_<LITTLE|BIG>_<DAILY|GAME>（守护按大写查表）\n';
+  Object.keys(__tier).forEach(k=>{if(__tier[k])s+=k.toUpperCase()+'='+__tier[k]+'\n';});
+  return s;
+}
+async function saveTier(){
+  // 原子写：先写 .tmp 再 mv。
+  // 直接 `cat > 目标` 会先把目标截断成 0 字节再写入，而守护每 3 秒读一次这个文件 ——
+  // 撞上窗口就会读到空/半截内容，档位回退到预设，表现为频率突然跳一下又跳回来。
+  const w=await ksuExec("cat > "+TIERF+".tmp <<'EOF'\n"+tierBody()+"EOF\n"
+    +"mv -f "+TIERF+".tmp "+TIERF+"\nchmod 0666 "+TIERF);
+  if(!isOk(w)){ toast('写入失败，请重试'); return false; }
+  const good=await send('apply');
+  if(!good){ toast('已写入，但下发失败，请再点一次'); return false; }
+  setTimeout(refresh,900);
+  return true;
+}
+async function loadTier(){   // 统一按大写保存（含兼容早期小写写法）
+  const o=parseKv(await sh('cat '+TIERF));
+  __tier={};
+  Object.keys(o).forEach(k=>{if(/^(POWERSAVE|BALANCE|PERFORMANCE|FAST)_/i.test(k))__tier[k.toUpperCase()]=o[k];});
+  fillTierSelects();
+}
+
+/* ===== 自定义频率 ===== */
+function buildFreqSelects(){
+  [['f-ld','LITTLE_DAILY'],['f-bd','BIG_DAILY'],['f-lg','LITTLE_GAME'],['f-bg','BIG_GAME']]
+    .forEach(([id,key])=>{
+      const el=document.getElementById(id);
+      el.innerHTML='';
+      el.appendChild(opt('0','不限'));
+      CELL_OPP[key].forEach(f=>el.appendChild(opt(''+f,mhz(f)+' MHz')));
+      el.dataset.key=key;
+    });
+}
+async function loadCustom(){
+  const o=parseKv(await sh('cat '+CUSTOMF));
+  document.getElementById('sw-cuen').checked=(o.ENABLE==='1');
+  document.querySelectorAll('#freqGrid select').forEach(el=>{
+    const key=el.dataset.key;
+    const v=o[key];
+    if(v!==undefined&&v!==''){
+      if(![].some.call(el.options,x=>x.value===v))el.appendChild(opt(v,mhz(Number(v))+' MHz'));
+      el.value=v;
+    }else el.value='0';
+  });
+}
+async function saveCustom(){
+  const en=document.getElementById('sw-cuen').checked?'1':'0';
+  const g=id=>document.getElementById(id).value;
+  const body='# 全局自定义频率（单位 kHz）· 由 WebUI 写入\n'+
+    '# 键名：<LITTLE|BIG>_<DAILY|GAME>；与所选档位无关，开启后两个场景全局生效\n'+
+    '# 0 = 该簇不限频（模块写入 -1，规避内核把 0 当最低频）\n'+
+    '# 优先级：自定义 > 档位覆盖(tier_freq.conf) > 内置预设\n'+
+    'ENABLE='+en+'\n'+
+    'LITTLE_DAILY='+g('f-ld')+'\nBIG_DAILY='+g('f-bd')+'\n'+
+    'LITTLE_GAME='+g('f-lg')+'\nBIG_GAME='+g('f-bg')+'\n';
+  // 同 saveTier：原子写（.tmp + mv），避免守护读到被截断的半截文件
+  const w=await ksuExec("cat > "+CUSTOMF+".tmp <<'EOF'\n"+body+"EOF\n"
+    +"mv -f "+CUSTOMF+".tmp "+CUSTOMF+"\nchmod 0666 "+CUSTOMF);
+  if(!isOk(w)){ toast('写入失败，请重试'); return; }
+  const good=await send('apply');
+  if(!good){ toast('已写入，但下发失败，请再点一次保存'); return; }
+  toast(en==='1'?'自定义已启用并生效':'已保存（自定义未启用）');
+  setTimeout(refresh,900);
+}
+
+/* ===== 深度睡眠 =====
+   白名单只存包名（模块侧不依赖任何包管理器），界面上的中文名来自本字典；
+   未收录的显示包名本身。已安装列表由 WebUI 自己读 `cmd package list packages -3`，
+   只在打开本页时拉一次（缓存 120 秒），不进 state.conf，避免守护每 3 秒白跑。 */
+const APP_CN={
+  'com.tencent.mm':'微信','com.tencent.mobileqq':'QQ','com.tencent.tim':'TIM',
+  'com.tencent.wework':'企业微信','com.tencent.qqmusic':'QQ音乐','com.tencent.qqlive':'腾讯视频',
+  'com.tencent.androidqqmail':'QQ邮箱','com.tencent.news':'腾讯新闻','com.tencent.weishi':'微视',
+  'com.eg.android.AlipayGphone':'支付宝','com.taobao.taobao':'淘宝','com.tmall.wireless':'天猫',
+  'com.jingdong.app.mall':'京东','com.xunmeng.pinduoduo':'拼多多','com.sankuai.meituan':'美团',
+  'me.ele':'饿了么','com.sdu.didi.psnger':'滴滴出行','com.autonavi.minimap':'高德地图',
+  'com.baidu.BaiduMap':'百度地图','com.baidu.searchbox':'百度','com.baidu.netdisk':'百度网盘',
+  'com.sina.weibo':'微博','com.zhihu.android':'知乎','com.xingin.xhs':'小红书',
+  'com.ss.android.ugc.aweme':'抖音','com.ss.android.article.news':'今日头条','com.smile.gifmaker':'快手',
+  'com.netease.cloudmusic':'网易云音乐','com.kugou.android':'酷狗音乐','cn.kuwo.player':'酷我音乐',
+  'com.ximalaya.ting.android':'喜马拉雅','com.qiyi.video':'爱奇艺','com.youku.phone':'优酷',
+  'tv.danmaku.bili':'哔哩哔哩','com.tencent.tmgp.sgame':'王者荣耀','com.tencent.tmgp.pubgmhd':'和平精英',
+  'com.miHoYo.Yuanshen':'原神','com.miHoYo.hkrpg':'崩坏：星穹铁道','com.mojang.minecraftpe':'我的世界',
+  'com.netease.mc':'我的世界(网易)','com.dragon.read':'番茄免费小说','com.tencent.weread':'微信读书',
+  'com.alibaba.android.rimet':'钉钉','com.xiaomi.wearable':'小米运动健康','com.mi.health':'小米健康',
+  'com.miui.player':'小米音乐','com.github.metacubex.clash.meta':'Clash Meta','bin.mt.plus':'MT管理器',
+  'me.weishu.kernelsu':'KernelSU','com.omarea.vtools':'Scene','com.openai.chatgpt':'ChatGPT',
+  'com.termux':'Termux','org.telegram.messenger':'Telegram','com.whatsapp':'WhatsApp',
+  'com.discord':'Discord','com.spotify.music':'Spotify','com.google.android.youtube':'YouTube'
+};
+const appName=p=>APP_CN[p]||p;
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+async function loadApps(){
+  if(__apps&&Date.now()-__appsTs<120000)return __apps;
+  const out=await sh('cmd package list packages -3 2>/dev/null');
+  const list=[];
+  (out||'').split('\n').forEach(l=>{const m=/^package:(\S+)/.exec(l.trim());if(m)list.push(m[1]);});
+  if(list.length){__apps=list;__appsTs=Date.now();}
+  return __apps||[];
+}
+
+async function renderDs(){
+  const sw=document.getElementById('sw-ds');if(!sw)return;
+  sw.checked=__ds;
+  const st=document.getElementById('dsStatus'),body=document.getElementById('dsBody');
+  const sub=document.getElementById('dsSub');
+  if(sub)sub.textContent='熄屏 '+__dsgrace+' 秒未充电时自动进入';
+  if(st){
+    st.style.display=__ds?'':'none';
+    if(__ds)st.innerHTML=__dsact
+      ?'<span class="badge on">深睡中</span> 系统已进入深度休眠'
+      :'<span class="badge warn">待命</span> 熄屏 '+__dsgrace+' 秒且未充电时自动进入';
+  }
+  if(body)body.style.display=__ds?'':'none';
+  if(!__ds)return;
+
+  const wl=(__dswhite||'').split(',').filter(x=>x);
+
+  /* 白名单 */
+  const we=document.getElementById('dsWhite');
+  if(we){
+    we.innerHTML=wl.length
+      ? wl.map(p=>'<div class="approw"><div class="nm"><b>'+esc(appName(p))+'</b><span>'+esc(p)+'</span></div>'+
+                  '<button type="button" class="mini warn" data-dsdel="'+esc(p)+'">移除</button></div>').join('')
+      : '<div class="empty">白名单为空 —— 熄屏后所有应用都会被强制休眠</div>';
+    we.querySelectorAll('[data-dsdel]').forEach(b=>{
+      b.onclick=()=>dispatch(b,'dsdel='+b.dataset.dsdel,'已移出白名单',1200);
+    });
+  }
+
+  /* 候选应用：已安装且不在白名单 */
+  const apps=await loadApps();
+  const q=((document.getElementById('dsSearch')||{}).value||'').toLowerCase();
+  const cand=apps.filter(p=>{
+    if(wl.indexOf(p)>=0)return false;
+    if(!q)return true;
+    return p.toLowerCase().indexOf(q)>=0||appName(p).toLowerCase().indexOf(q)>=0;
+  }).sort((a,b)=>appName(a).localeCompare(appName(b),'zh'));
+  const ae=document.getElementById('dsApps');
+  if(ae){
+    ae.innerHTML=cand.length
+      ? '<div class="sect">可添加<span class="cnt">'+cand.length+' 款</span></div>'+cand.map(p=>
+          '<div class="approw"><div class="nm"><b>'+esc(appName(p))+'</b><span>'+esc(p)+'</span></div>'+
+          '<button type="button" class="mini go" data-dsadd="'+esc(p)+'">加入白名单</button></div>').join('')
+      : '<div class="empty">'+(apps.length?'没有匹配的应用了':'读不到应用列表，确认 WebUI 有 root 权限')+'</div>';
+    ae.querySelectorAll('[data-dsadd]').forEach(b=>{
+      b.onclick=()=>dispatch(b,'dsadd='+b.dataset.dsadd,'已加入白名单',1200);
+    });
+  }
+
+  /* 唤醒排行（上次深睡期间） */
+  const wu=__dswunit==='wake'?'唤醒':'闹钟触发';
+  const wk=(__dsw||'').split(',').filter(x=>x).map(x=>{
+    const c=x.lastIndexOf(':');return c>0?{pkg:x.slice(0,c),n:+x.slice(c+1)}:null;
+  }).filter(x=>x&&x.pkg);
+  const ke=document.getElementById('dsWake');
+  if(ke){
+    ke.innerHTML=wk.length
+      ? wk.map((e,i)=>{
+          const inW=wl.indexOf(e.pkg)>=0;
+          return '<div class="approw"><span class="rank'+(i<3?' hot':'')+'">'+(i+1)+'</span>'+
+                 '<div class="nm"><b>'+esc(appName(e.pkg))+'</b><span>'+esc(e.pkg)+' · '+wu+' '+e.n+' 次</span></div>'+
+                 (inW?'<span class="badge on">已保护</span>'
+                     :'<button type="button" class="mini go" data-dsadd="'+esc(e.pkg)+'">加白</button>')+'</div>';
+        }).join('')
+      : '<div class="empty">暂无统计 —— 经历一次完整熄屏深睡后出榜</div>';
+    ke.querySelectorAll('[data-dsadd]').forEach(b=>{
+      b.onclick=()=>dispatch(b,'dsadd='+b.dataset.dsadd,'已加入白名单',1200);
+    });
+  }
+}
+
+/* ===== 刷新 ===== */
+let __busy=false;
+async function refresh(){
+  if(__busy)return;          // 防重入：exec 偶发超时后不要堆积请求
+  __busy=true;
+  try{
+    let s=await sh('cat '+STATEF);
+    if(!s.trim()){           // 空内容（读写撞车）→ 稍后重读一次
+      await new Promise(r=>setTimeout(r,260));
+      s=await sh('cat '+STATEF);
+    }
+    if(s.trim()||!__lastState){ if(s.trim())__lastState=s; renderState(parseKv(__lastState)); }
+    // 深睡页可见时才重绘（renderDs 会去读一次已安装应用表，别在后台白跑）
+    const dsp=document.getElementById('p-ds');
+    if(dsp&&dsp.classList.contains('on'))await renderDs();
+    const m=parseKv(await sh('cat '+MODEF));
+    if(m.mode_daily)__md=m.mode_daily;
+    if(m.mode_game)__mg=m.mode_game;
+    markPills();
+    const note=document.getElementById('modeNote');
+    note.textContent='当前：日用 = '+MODE_CN[__md]+'　游戏 = '+MODE_CN[__mg];
+  } finally { __busy=false; }
+}
+
+/* ===== 操作按钮 ===== */
+function bindOps(){
+  document.getElementById('op-restore').onclick=e=>dispatch(e.currentTarget,'restore','已恢复不限（保持放开）',900);
+  document.getElementById('op-toggle').onclick=e=>{
+    const dis=__dis;
+    dispatch(e.currentTarget,dis?'enable':'disable',dis?'已恢复限频':'已停用限频',1100);
+  };
+  document.getElementById('op-restart').onclick=e=>dispatch(e.currentTarget,'restart','正在重启守护…',2500);
+  document.getElementById('op-stop').onclick=e=>dispatch(e.currentTarget,'stop','已停守护并恢复不限',1200);
+  document.getElementById('cust-save').onclick=saveCustom;
+  document.getElementById('cust-reset').onclick=async()=>{
+    __tier={};
+    if(await saveTier())toast('档位覆盖已全部清除');
+  };
+  document.getElementById('tier-reset').onclick=async()=>{
+    __tier={};fillTierSelects();
+    if(await saveTier())toast('已恢复内置档位表');
+  };
+  /* 深度睡眠：总开关 */
+  const dsw=document.getElementById('sw-ds');
+  if(dsw)dsw.onchange=e=>{
+    const v=e.target.checked?1:0;
+    if(!v&&__dsact)__dsact=false;
+    renderDs();
+    dispatch(dsw,'ds='+v,v?'深度睡眠已开启':'深度睡眠已关闭',1200);
+  };
+  const dss=document.getElementById('dsSearch');
+  if(dss)dss.oninput=()=>{renderDs();};
+}
+
+/* ===== 液态选择器：自绘底部弹层，替代系统原生下拉 ===== */
+let lpkMask=null,lpkList=null,lpkSel=null;
+function lpkBuild(){
+  if(lpkMask)return;
+  lpkMask=document.createElement('div');lpkMask.className='lpk-mask';
+  const sheet=document.createElement('div');sheet.className='lpk';
+  const grab=document.createElement('div');grab.className='lpk-grab';
+  lpkList=document.createElement('div');lpkList.className='lpk-list';
+  sheet.appendChild(grab);sheet.appendChild(lpkList);lpkMask.appendChild(sheet);
+  document.body.appendChild(lpkMask);
+  lpkMask.addEventListener('click',e=>{if(e.target===lpkMask)lpkClose();});
+}
+function lpkOpen(sel){
+  lpkBuild();lpkSel=sel;lpkList.innerHTML='';
+  Array.prototype.forEach.call(sel.options,o=>{
+    const it=document.createElement('div');it.className='lpk-item'+(o.selected?' sel':'');
+    const t=document.createElement('span');t.textContent=o.textContent;
+    const d=document.createElement('span');d.className='lpk-dot';
+    it.appendChild(t);it.appendChild(d);
+    it.onclick=()=>{
+      lpkClose();
+      if(sel.value!==o.value){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}));}
+    };
+    lpkList.appendChild(it);
+  });
+  lpkMask.classList.add('on');
+  const cur=lpkList.querySelector('.lpk-item.sel');
+  if(cur)lpkList.scrollTop=cur.offsetTop-lpkList.clientHeight/2+cur.clientHeight/2;
+}
+function lpkClose(){if(lpkMask)lpkMask.classList.remove('on');lpkSel=null;}
+let lpkLastT=0,lpkLastSel=null,lpkTrack=false,lpkX=0,lpkY=0,lpkOpenedAt=0;
+function lpkTarget(e){return e.target&&e.target.closest?e.target.closest('select'):null;}
+['pointerdown','touchstart'].forEach(ev=>document.addEventListener(ev,e=>{
+  const s=lpkTarget(e);lpkTrack=!!s;
+  if(s){const p=e.touches?e.touches[0]:e;lpkX=p.clientX;lpkY=p.clientY;if(ev==='pointerdown')e.preventDefault();}
+},true));
+document.addEventListener('mousedown',e=>{if(lpkTarget(e))e.preventDefault();},true);
+function lpkTap(e){
+  const s=lpkTarget(e);if(!s)return;
+  if(e.type==='click'){e.preventDefault();e.stopPropagation();}
+  const wasTrack=lpkTrack;lpkTrack=false;
+  if(wasTrack&&e.type!=='focusin'){
+    const p=e.changedTouches?e.changedTouches[0]:e;
+    const dx=(p.clientX||0)-lpkX,dy=(p.clientY||0)-lpkY;
+    if(dx*dx+dy*dy>100)return;
+  }
+  const t=Date.now();
+  if(s===lpkLastSel&&t-lpkLastT<350)return;
+  lpkLastT=t;lpkLastSel=s;
+  try{if(document.activeElement===s)s.blur();}catch(err){}
+  try{lpkOpen(s);lpkOpenedAt=Date.now();}catch(err){}
+}
+['pointerup','touchend','click'].forEach(ev=>document.addEventListener(ev,lpkTap,true));
+document.addEventListener('click',e=>{
+  if(lpkMask&&lpkMask.classList.contains('on')&&Date.now()-lpkOpenedAt<400){e.preventDefault();e.stopPropagation();}
+},true);
+document.addEventListener('focusin',e=>{
+  const s=lpkTarget(e);
+  if(s&&(!lpkMask||!lpkMask.classList.contains('on')))lpkTap({type:'focusin',target:s});
+},true);
+
+/* ===== 主题 ===== */
+const TH_IC={light:'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.9"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>',
+              dark:'<svg viewBox="0 0 24 24" fill="none"><path d="M20 13.5A8 8 0 1 1 10.5 4 6.6 6.6 0 0 0 20 13.5z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>'};
+const TH_TXT={light:'日间',dark:'夜间'};
+function applyTheme(t){
+  document.body.dataset.theme=t;
+  try{localStorage.setItem('mtf-theme',t);}catch(e){}
+  document.getElementById('theme-btn').classList.add('on');
+  document.getElementById('th-ic').innerHTML=TH_IC[t];
+  document.getElementById('th-txt').textContent=TH_TXT[t];
+}
+document.getElementById('theme-btn').onclick=()=>applyTheme(document.body.dataset.theme==='light'?'dark':'light');
+(function(){
+  let t='';
+  try{t=localStorage.getItem('mtf-theme')||'';}catch(e){}
+  if(!t){const h=new Date().getHours();t=(h>=7&&h<19)?'light':'dark';}
+  applyTheme(t);
+})();
+
+/* ===== 顶栏高度实测：留白自动跟随 ===== */
+(function(){
+  const tb=document.querySelector('.topbar');
+  const setH=()=>document.documentElement.style.setProperty('--toph',tb.offsetHeight+'px');
+  setH();window.addEventListener('resize',setH);
+  if(typeof ResizeObserver!=='undefined')new ResizeObserver(setH).observe(tb);
+})();
+
+/* ===== 页面切换 ===== */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    document.getElementById(t.dataset.p).classList.add('on');
+    document.querySelector('.scroll').scrollTop=0;
+    refresh();
+  };
+});
+
+let toastTimer,toastClear;
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);clearTimeout(toastClear);
+  toastTimer=setTimeout(()=>{
+    t.classList.remove('show');
+    /* 淡出后清空文案：即使将来样式被改动、忘了 pointer-events，
+       空内容宽度为 0，也不会挡住任何按钮 */
+    toastClear=setTimeout(()=>{if(!t.classList.contains('show'))t.textContent='';},340);
+  },1800);
+}
+
+/* ===== 启动 ===== */
+(async function init(){
+  buildPills();buildFreqSelects();buildTierTable();bindOps();
+  await loadTier();await loadCustom();
+  await refresh();
+  setInterval(refresh,2500);
+})();
+</script>
+</body>
+</html>

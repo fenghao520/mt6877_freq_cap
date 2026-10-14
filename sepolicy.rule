@@ -1,0 +1,4 @@
+allow magisk input_device chr_file { read open ioctl getattr }
+allow su input_device chr_file { read open ioctl getattr }
+allow kernelsu input_device chr_file { read open ioctl getattr }
+allow apd input_device chr_file { read open ioctl getattr }
