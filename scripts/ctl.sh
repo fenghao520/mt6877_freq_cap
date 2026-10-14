@@ -11,12 +11,16 @@
 #   ds on|off|status    深度睡眠开关 / 查看
 #   ds enter|exit       立即进入 / 立即还原（调试用）
 #   dswhite list|add <包名>|del <包名>   深睡白名单
+#   rr on|off|status    刷新率管理开关 / 查看
+#   rr daily <Hz>       设置日用场景锁定的刷新率
+#   rr game <Hz>        设置游戏场景锁定的刷新率
 # （频率微调请在 WebUI「频率」页操作：全局自定义 custom_freq.conf / 档位覆盖 tier_freq.conf）
 # 用 cd+dirname 取绝对路径：支持「cd 到脚本目录后 sh ctl.sh」这类相对调用
 MODDIR="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
 [ -d "$MODDIR/scripts" ] || MODDIR="/data/adb/modules/mt6877_freq_cap"
 . "$MODDIR/scripts/util.sh"
 . "$MODDIR/scripts/dsleep.sh"
+. "$MODDIR/scripts/rrate.sh"
 
 # tier_freq.conf 里的有效覆盖项数。
 # 注意不能写成 `grep -c ... || echo 0`：grep -c 在无匹配时会「打印 0 并返回非零」，
@@ -57,6 +61,11 @@ case "$CMD" in
             DSL=关闭
         fi
         echo "深度睡眠 : $DSL   白名单: $(ds_white_n) 个   宽限: $(ds_grace) 秒"
+        if [ "$(rr_enabled)" = "1" ]; then
+            echo "刷新率   : 开启 日用$(rr_rate_for daily)Hz/游戏$(rr_rate_for game)Hz   $(rr_state_line)  实际生效=$(rr_now)Hz  支持=$(rr_supported)"
+        else
+            echo "刷新率   : 关闭   支持=$(rr_supported)"
+        fi
         echo "cluster0 : A55 上限=$(ppm_khz 0) kHz (节点索引=$_c0)  当前频率=$(cpu_cur 0) kHz  硬件最大=$(cpu_max 0)"
         echo "cluster1 : A78 上限=$(ppm_khz 1) kHz (节点索引=$_c1)  当前频率=$(cpu_cur 1) kHz  硬件最大=$(cpu_max 1)"
         ;;
@@ -177,7 +186,42 @@ case "$CMD" in
                 echo "配置白名单: $(ds_white_conf)"
                 echo "生效白名单: $(ds_white_effective)" ;;
         esac ;;
+    # ---------------- 刷新率 ----------------
+    rr)
+        sub="$2"
+        case "$sub" in
+            on|1)
+                rr_conf_set enable 1
+                echo "刷新率管理：已开启（亮屏时 日用锁 $(rr_rate_for daily)Hz / 游戏锁 $(rr_rate_for game)Hz；熄屏交还系统）" ;;
+            off|0)
+                rr_conf_set enable 0
+                rr_handback
+                echo "刷新率管理：已关闭，已还原为你原来的设置" ;;
+            daily)
+                v="$3"
+                case "$v" in ''|*[!0-9]*) echo "用法: ctl.sh rr daily <Hz>"; exit 1 ;; esac
+                rr_conf_set daily "$v"
+                echo "日用场景已设为 ${v}Hz（本机支持: $(rr_supported)）" ;;
+            game)
+                v="$3"
+                case "$v" in ''|*[!0-9]*) echo "用法: ctl.sh rr game <Hz>"; exit 1 ;; esac
+                rr_conf_set game "$v"
+                echo "游戏场景已设为 ${v}Hz（本机支持: $(rr_supported)）" ;;
+            *)
+                if [ "$(rr_enabled)" = "1" ]; then EN=开启; else EN=关闭; fi
+                echo "开关       : $EN"
+                echo "日用 / 游戏: $(rr_rate_for daily)Hz / $(rr_rate_for game)Hz"
+                echo "本机支持   : $(rr_supported)"
+                echo "当前生效   : $(rr_now)Hz"
+                echo "锁定状态   : $(rr_state_line)"
+                if [ -f "$RR_SAVED" ]; then
+                    echo "原值快照   : $(sed -n 's/^min=/min=/p' "$RR_SAVED" | head -n1)  $(sed -n 's/^peak=/peak=/p' "$RR_SAVED" | head -n1)"
+                else
+                    echo "原值快照   : 无（未接管过，不会动你的设置）"
+                fi
+                ;;
+        esac ;;
     *)
-        sed -n '2,20p' "$0"
+        sed -n '2,24p' "$0"
         ;;
 esac

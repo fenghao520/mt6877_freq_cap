@@ -9,6 +9,7 @@ MODDIR="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
 [ -d "$MODDIR/scripts" ] || MODDIR="/data/adb/modules/mt6877_freq_cap"
 . "$MODDIR/scripts/util.sh"
 . "$MODDIR/scripts/dsleep.sh"
+. "$MODDIR/scripts/rrate.sh"
 
 # 记录自身 PID，供 kill_daemon / 状态查询精确定位（避免按字符串扫 cmdline 误伤其它进程）
 echo $$ > "$DAEMON_PID_FILE" 2>/dev/null
@@ -20,6 +21,8 @@ BOOT_BOOST_UPTO=100    # /proc/uptime 小于该秒数时视为「刚开机」
 TICK_ON=3              # 亮屏巡检间隔(秒)
 TICK_OFF=12            # 熄屏巡检间隔(秒)
 TICK_OFF_DS=3          # 深睡开启时的熄屏巡检间隔(秒)：保证宽限期内进入、亮屏 3 秒内还原
+TICK_OFF_NIGHT=10      # 夜间(0~6点)熄屏巡检间隔(秒)：整夜巡检 3 秒一次太费，
+                       # 夜里拿起手机最多晚 10 秒恢复限频，这个代价换整夜省电是划算的
 # 前台应用缓存有效期。必须 < TICK_ON，否则「每 3 秒一轮」里会跳过扫描
 # （原来是 4 秒：第 3 秒时 3<4 不扫、第 6 秒才扫 → 实际每两轮才识别一次前台，
 #   游戏↔日用的场景切换要多等一轮，这就是「切了游戏但频率没跟上」的来源）。
@@ -39,13 +42,32 @@ NEED_REAPPLY=0     # 熄屏释放过 → 亮屏后必须重写一次
 FG_PKG=""
 FG_TS=0
 DS_SINCE=""        # 本次熄屏起点（深睡宽限计时用；由 dsleep.sh 读取/清空）
+PPM_FAIL=0         # 连续写 PPM 失败次数（≥3 才写进 state.conf 报警，偶发一次不惊动用户）
+RR_NOW=""          # 刷新率「实际生效值」缓存（dumpsys 较重，节流刷新）
+RR_SUP=""          # 本机支持的刷新率档位（只探一次就缓存）
+RR_TICK=0
 
 log_line() { # screen fg scene mode c0 c1 [disabled]
-    local _i0 _i1
+    local _i0 _i1 _warn="" _now=""
     # 配置目录万一被删掉，状态会写不进去、WebUI 一直显示「未运行」。
     # 这里补一次，省得用户看不出到底是守护挂了还是目录没了。
     [ -d "$CF_DIR" ] || mkdir -p "$CF_DIR" 2>/dev/null
     _i0="$(ppm_val 0)"; _i1="$(ppm_val 1)"
+
+    # 写失败告警：连续失败才提示，偶发一次不值得吓唬用户
+    if [ "${PPM_FAIL:-0}" -ge 3 ] 2>/dev/null; then _warn="ppm_write_fail"; fi
+
+    # 刷新率的「实际生效值」要跑一次 dumpsys SurfaceFlinger --displays，比较重；
+    # 只在功能开启时读，且每 5 轮（约 15 秒）才刷新一次，其余轮次用缓存值。
+    if [ "$(rr_enabled)" = "1" ]; then
+        RR_TICK=$((RR_TICK + 1))
+        if [ -z "$RR_NOW" ] || [ "$RR_TICK" -ge 5 ]; then
+            RR_TICK=0
+            RR_NOW="$(rr_now)"
+            [ -n "$RR_SUP" ] || RR_SUP="$(rr_supported)"
+        fi
+        _now="$RR_NOW"
+    fi
     # 原子写入：先写临时文件再 rename，避免 WebUI 恰好 cat 到「刚被截断的空文件」
     # （/sdcard 上同一目录内 mv 是原子替换，读侧要么看到旧内容要么看到新内容）
     {
@@ -71,6 +93,14 @@ log_line() { # screen fg scene mode c0 c1 [disabled]
         echo "dswhite=$(ds_white_csv)"
         echo "dsw=$(ds_wake_csv)"
         echo "dswunit=$(ds_wake_unit)"
+        # ---- 刷新率（WebUI「刷新率」页读取）----
+        echo "rren=$(rr_enabled)"
+        echo "rrdaily=$(rr_rate_for daily)"
+        echo "rrgame=$(rr_rate_for game)"
+        echo "rrheld=$(rr_holding)"
+        echo "rrnow=$_now"
+        echo "rrsup=$RR_SUP"
+        echo "warn=$_warn"
     } > "$STATE_FILE.tmp" 2>/dev/null
     chmod 0644 "$STATE_FILE.tmp" 2>/dev/null
     mv -f "$STATE_FILE.tmp" "$STATE_FILE" 2>/dev/null \
@@ -142,7 +172,11 @@ process_cmd() {
             dsdel=*)  ds_white_del "${line#dsdel=}" ;;
             dsnow)    DS_SINCE="$(date +%s)"; ds_enter ;;
             dsexit)   ds_exit ;;
-            stop)    ds_exit; ppm_release; rm -f "$DAEMON_PID_FILE" 2>/dev/null; exit 0 ;;
+            # ---- 刷新率 ----
+            rr=*)      rr_conf_set enable "${line#rr=}" ;;
+            rrdaily=*) rr_conf_set daily "${line#rrdaily=}" ;;
+            rrgame=*)  rr_conf_set game  "${line#rrgame=}"  ;;
+            stop)    ds_exit; rr_drop; ppm_release; rm -f "$DAEMON_PID_FILE" 2>/dev/null; exit 0 ;;
         esac
     done < "$_snap"
     rm -f "$_snap" 2>/dev/null
@@ -182,6 +216,8 @@ while true; do
         # device_idle_constants 一直留在系统里，连亮屏都不会还原（手机像卡住），
         # 而且设置里还显示着「已停用」，用户根本无从判断是模块干的。
         [ -f "$DS_ACT" ] && ds_exit
+        # 刷新率同理：停用就该把控制权还给系统，不然「刷新率锁定」会一直留着
+        rr_drop
         log_line off "" "" "" -1 -1 1
         sleep 10
         continue
@@ -193,6 +229,7 @@ while true; do
             ppm_release
             RELEASED=1
             NEED_REAPPLY=1   # 不用清 LAST_SIG：亮屏时再清，避免手动的「恢复不限」被熄屏顺带取消
+            rr_drop          # 熄屏时锁刷新率没意义，交还系统让息屏显示/低功耗自己决定
         fi
         log_line off "" "" "" -1 -1 0
         if [ "$(ds_enabled)" = "1" ]; then
@@ -201,7 +238,14 @@ while true; do
             # 所以宽限期等待期间主循环照样转 → 命令照常处理、亮屏 3 秒内还原，
             # 同时「熄屏满 20 秒进入深睡」也仍然成立。
             ds_off_tick
-            sleep "$TICK_OFF_DS"
+            # 夜间放宽：整夜每 3 秒巡检一次太费电，0~6 点放宽到 10 秒。
+            # 深睡宽限计时靠 DS_SINCE 跨轮累计，所以放宽不影响「熄屏满 20 秒进深睡」，
+            # 代价只是夜里拿起手机后恢复限频最多晚 10 秒。
+            if is_night; then
+                sleep "$TICK_OFF_NIGHT"
+            else
+                sleep "$TICK_OFF_DS"
+            fi
         else
             sleep "$TICK_OFF"
         fi
@@ -261,9 +305,25 @@ while true; do
         # 否则「值没变 → 不重写」的优化会让它永久不再补写，表现为改了不生效。
         if ppm_set 0 "$c0" && ppm_set 1 "$c1"; then
             LAST_SIG="$sig"
+            PPM_FAIL=0
         else
             LAST_SIG=""    # 留空 → 下一轮重新尝试
+            PPM_FAIL=$((PPM_FAIL + 1))
         fi
+    fi
+
+    # 9) 刷新率：按当前场景锁定（功能关闭时立即交还）
+    #    rr_take 是幂等的（先比对已锁值），所以每轮调用只是读一个小文件，很便宜。
+    if [ "$(rr_enabled)" = "1" ]; then
+        if [ "$scene" = game ]; then
+            rr_take "$(rr_rate_for game)"
+        else
+            rr_take "$(rr_rate_for daily)"
+        fi
+    else
+        # 功能关闭 → 彻底交还（连快照一起清掉，见 rrate.sh 里的说明）。
+        # 加个存在性判断，避免每轮都白跑两个 test。
+        if [ -f "$RR_HELD" ] || [ -f "$RR_SAVED" ]; then rr_handback; fi
     fi
 
     log_line on "$FG_PKG" "$scene" "$mode" "$c0" "$c1" 0

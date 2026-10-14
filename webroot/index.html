@@ -122,6 +122,8 @@
   .tag.game{color:var(--rd);border-color:rgba(240,97,122,.35);}
   .tag.daily{color:var(--cy);border-color:rgba(34,193,224,.35);}
   .pills{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .pills.p2{grid-template-columns:repeat(2,1fr);}
+  .pills.p3{grid-template-columns:repeat(3,1fr);}
   .pill{appearance:none;border:1px solid var(--line);
     background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 55%),var(--card2);
     color:var(--sub);padding:11px 4px;border-radius:13px;font-size:14px;font-weight:600;cursor:pointer;
@@ -287,7 +289,8 @@
     backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);
     border:1px solid transparent;
     box-shadow:var(--glass-shadow),inset 0 1px 0 var(--glass-hi);
-    padding:6px 6px;display:grid;grid-template-columns:repeat(5,1fr);}
+    padding:5px 4px;display:grid;grid-template-columns:repeat(6,1fr);}
+  .tabbar .tab span{font-size:10.5px;}
   .tab{background:none;border:none;color:var(--mut);font-size:11px;cursor:pointer;
     display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:17px;
     transition:transform .18s var(--spring),background .22s,color .22s;}
@@ -376,6 +379,7 @@
       <div class="card">
         <h2><span class="bar"></span>运行状态</h2>
         <div id="stateBody"><div class="kv"><span class="k">读取中…</span><span class="v">-</span></div></div>
+        <div class="hint" id="warnBox" style="display:none"></div>
       </div>
       <div class="card">
         <h2><span class="bar"></span>全局模式</h2>
@@ -456,6 +460,39 @@
       </div>
     </div>
 
+    <!-- ============ 刷新率 ============ -->
+    <div class="page" id="p-rr">
+      <div class="card">
+        <h2><span class="bar"></span>刷新率管理</h2>
+        <div class="row">
+          <div class="ic">🖥️</div>
+          <div class="meta"><b>按场景锁定刷新率</b><span id="rrSub">关闭时完全交还系统</span></div>
+          <label class="sw"><input type="checkbox" id="sw-rr"><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="hint">亮屏时按场景锁定，<b>熄屏自动交还系统</b>；关闭本功能、停用模块或卸载，都会还原成你原来的设置。
+          用的是 AOSP 标准设置项（<code>min_refresh_rate</code> / <code>peak_refresh_rate</code>），
+          和系统设置里那一项是同一个东西，不会互抢。</div>
+        <div class="hint" id="rrStatus" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="bar"></span>场景档位</h2>
+        <div class="sect">日用场景</div>
+        <div class="pills p2" id="rr-daily"></div>
+        <div class="sect">游戏场景</div>
+        <div class="pills p2" id="rr-game"></div>
+        <div class="hint" id="rrNote">档位取自本机实际支持的刷新率，点选即生效。</div>
+      </div>
+
+      <div class="card">
+        <h2><span class="bar"></span>当前状态</h2>
+        <div class="kv"><span class="k">功能开关</span><span class="v" id="rr-en">—</span></div>
+        <div class="kv"><span class="k">锁定状态</span><span class="v" id="rr-held">—</span></div>
+        <div class="kv"><span class="k">实际生效</span><span class="v" id="rr-nowv">—</span></div>
+        <div class="kv"><span class="k">本机支持</span><span class="v" id="rr-sup">—</span></div>
+      </div>
+    </div>
+
     <!-- ============ 安全 ============ -->
     <div class="page" id="p-safe">
       <div class="card">
@@ -499,7 +536,7 @@
       <div class="card about">
         <h2><span class="bar"></span>关于</h2>
         <div class="kv"><span class="k">模块</span><span class="v">天玑920限频</span></div>
-        <div class="kv"><span class="k">版本</span><span class="v" id="ab-ver">v1.2.3</span></div>
+        <div class="kv"><span class="k">版本</span><span class="v" id="ab-ver">v1.2.4</span></div>
         <div class="kv"><span class="k">目标 SoC</span><span class="v">MT6877 天玑920</span></div>
         <div class="kv"><span class="k">控制通道</span><span class="v">/proc/ppm/policy/*</span></div>
         <div class="kv"><span class="k">配置目录</span><span class="v">/sdcard/Android/<br>mt6877_freq_cap</span></div>
@@ -513,6 +550,18 @@
           直接进入深度休眠。亮屏、插电或放音<b>立即逐项还原</b>。</p>
         <p>只收窄「用户级」白名单，系统自带的来电 / 短信 / 闹钟 / IMS 条目一律不动。接管前会把原值与改动清单
           落盘，守护被杀、模块卸载、重新开机都会照它补还原，不会残留系统状态。</p>
+        <h3>刷新率管理（v1.2.4 新增）</h3>
+        <p>亮屏时按<b>当前场景</b>把刷新率锁定在你选的档位，<b>熄屏自动交还系统</b>（息屏显示不受影响），
+          亮屏再锁回来。用的是 AOSP 标准设置项 <code>min_refresh_rate</code> / <code>peak_refresh_rate</code>，
+          和系统设置里那一项是同一个东西，<b>不会互相抢</b>。</p>
+        <p>动手前会把你的原值落盘（<code>rrate.saved</code>）；关闭功能、停用模块、卸载、重新开机都会照它还原。
+          没有快照时<b>绝不动</b>你的设置。</p>
+        <p>本机（Redmi Note 11 Pro+）实际支持 <b>60 / 120 Hz</b> 两档 —— 日用限 60 Hz 能省不少电，
+          但滑动会明显不如 120 Hz 跟手，所以默认关闭，自己权衡。</p>
+        <h3>夜间放宽巡检（v1.2.4 新增）</h3>
+        <p>深睡开启时，熄屏本来每 3 秒巡检一次；<b>0~6 点放宽到 10 秒</b>，减少整夜的无谓唤醒。
+          代价是夜里拿起手机后，恢复限频最多晚 10 秒。深睡宽限计时是跨轮累计的，
+          所以不会影响「熄屏满 20 秒进深睡」。</p>
         <h3>约定</h3>
         <ul>
           <li>写入用 <b>kHz</b>；<b>写 0 会被内核解释成最低档</b>，所以「不限」必须写 <code>-1</code>，模块已在底层代转。</li>
@@ -541,6 +590,10 @@
     <button class="tab" data-p="p-ds">
       <svg viewBox="0 0 24 24" fill="none"><path d="M20 13.5A8 8 0 1 1 10.5 4 6.6 6.6 0 0 0 20 13.5z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>
       <span>深睡</span>
+    </button>
+    <button class="tab" data-p="p-rr">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12.5" rx="2.2" stroke="currentColor" stroke-width="1.9"/><path d="M8.5 20h7M12 16.5V20" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M7 12.6l2.4-3.2 2.2 2.4 1.8-2.4 2.6 3.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>刷新率</span>
     </button>
     <button class="tab" data-p="p-safe">
       <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.2-2.9 7.7-7 9-4.1-1.3-7-4.8-7-9V6l7-3z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M9.2 12.2l2 2 3.6-3.9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -657,6 +710,9 @@ let __md='balance',__mg='fast',__dis=false,__running=false,__connFail=0;
 let __lastState='';   // 最近一次成功读到的 state.conf（读取偶发失败时用它兜底，页面不闪「未运行」）
 /* 深度睡眠 */
 let __ds=false,__dsact=false,__dswhite='',__dsw='',__dswunit='alarm',__dsgrace=20,__apps=null,__appsTs=0;
+/* 刷新率 */
+let __rren=false,__rrdaily=60,__rrgame=120,__rrheld='',__rrnow='',__rrsup='60,120';
+let __warn='';   // 守护上报的告警（如 ppm_write_fail）
 function renderState(o){
   const box=document.getElementById('stateBody');
   const nowSec=(Date.now()/1000)|0;
@@ -669,6 +725,11 @@ function renderState(o){
   __dswhite=o.dswhite||'';__dsw=o.dsw||'';
   if(o.dswunit==='wake'||o.dswunit==='alarm')__dswunit=o.dswunit;
   {const g=Number(o.dsgrace);if(g>=5)__dsgrace=g;}
+  /* 刷新率 + 告警 */
+  __rren=o.rren==='1';__rrheld=o.rrheld||'';__rrnow=o.rrnow||'';__warn=o.warn||'';
+  {const d=Number(o.rrdaily);if(d>0)__rrdaily=d;
+   const g2=Number(o.rrgame);if(g2>0)__rrgame=g2;}
+  if(o.rrsup)__rrsup=o.rrsup;
   // 偶发一次读取失败不立刻翻脸（WebUI 的 exec 有随机超时），连续 3 次才显示未连接
   if(!o.ts){ __connFail++; if(__connFail>=3) setConn(false); }
   else { __connFail=0; setConn(true); }
@@ -970,10 +1031,13 @@ async function refresh(){
       await new Promise(r=>setTimeout(r,260));
       s=await sh('cat '+STATEF);
     }
-    if(s.trim()||!__lastState){ if(s.trim())__lastState=s; renderState(parseKv(__lastState)); }
+    if(s.trim()||!__lastState){ if(s.trim())__lastState=s; renderState(parseKv(__lastState)); renderWarn(); }
     // 深睡页可见时才重绘（renderDs 会去读一次已安装应用表，别在后台白跑）
     const dsp=document.getElementById('p-ds');
     if(dsp&&dsp.classList.contains('on'))await renderDs();
+    // 刷新率页同理：不可见就不重建 DOM
+    const rrp=document.getElementById('p-rr');
+    if(rrp&&rrp.classList.contains('on'))renderRr();
     const m=parseKv(await sh('cat '+MODEF));
     if(m.mode_daily)__md=m.mode_daily;
     if(m.mode_game)__mg=m.mode_game;
@@ -981,6 +1045,67 @@ async function refresh(){
     const note=document.getElementById('modeNote');
     note.textContent='当前：日用 = '+MODE_CN[__md]+'　游戏 = '+MODE_CN[__mg];
   } finally { __busy=false; }
+}
+
+/* ===== 守护告警 =====
+   只在守护连续写失败时报出来。以前这类失败是静默的 —— 界面显示一切正常，
+   实际频率根本没写进去，用户完全无从判断。 */
+function renderWarn(){
+  const el=document.getElementById('warnBox');if(!el)return;
+  if(!__warn){el.style.display='none';el.innerHTML='';return;}
+  el.style.display='';
+  el.innerHTML=('<b style="color:var(--warn,#e8a33d)">⚠ 写入被内核拒绝</b> —— 守护已连续多次'
+    +'写不进 PPM 节点，当前频率上限可能没有生效。'
+    +'<br>常见原因：与其它调度/性能模块冲突，或节点被系统服务接管。'
+    +'<br>建议：先点本页「重启守护」；仍报警就把「安全」页的「立即恢复不限」点一次，'
+    +'再排查是否装了别的调速模块。');
+}
+
+/* ===== 刷新率 ===== */
+let __rrBuilt='';   // 档位按钮的构建指纹：值没变就不重建 DOM，免得刷新时把手感抖掉
+function renderRr(){
+  const sw=document.getElementById('sw-rr');if(!sw)return;
+  sw.checked=__rren;
+
+  const sup=(__rrsup||'60,120').split(',').filter(x=>x);
+  const sub=document.getElementById('rrSub');
+  if(sub)sub.textContent=__rren?'亮屏时按场景锁定 · 熄屏交还系统':'关闭时完全交还系统';
+
+  const st=document.getElementById('rrStatus');
+  if(st){
+    st.style.display=__rren?'':'none';
+    st.innerHTML=__rren
+      ? '<span class="badge on">已启用</span> 日用 '+__rrdaily+' Hz ／ 游戏 '+__rrgame+' Hz · '
+        +(__rrheld?('当前锁定 '+__rrheld+' Hz'):'当前已交还系统（熄屏中或等待下一轮）')
+        +(__rrnow?('　实际生效 '+__rrnow+' Hz'):'')
+      : '';
+  }
+
+  // 档位按钮只在「可选值或当前值」变化时重建
+  const sig=sup.join(',')+'|'+__rrdaily+'|'+__rrgame;
+  if(sig!==__rrBuilt){
+    __rrBuilt=sig;
+    const mk=(box,cur,slot)=>{
+      const el=document.getElementById(box);if(!el)return;
+      el.innerHTML=sup.map(h =>
+        '<button type="button" class="pill'+(Number(h)===Number(cur)?' on':'')+
+        '" data-slot="'+slot+'" data-hz="'+h+'">'+h+' Hz</button>').join('');
+      el.querySelectorAll('[data-slot]').forEach(b=>{
+        b.onclick=()=>dispatch(b,'rr'+b.dataset.slot+'='+b.dataset.hz,
+                               '已切换'+(b.dataset.slot==='game'?'游戏':'日用')+'：'+b.dataset.hz+' Hz',1000);
+      });
+    };
+    mk('rr-daily',__rrdaily,'daily');
+    mk('rr-game',__rrgame,'game');
+  }
+
+  const nt=document.getElementById('rrNote');
+  if(nt)nt.textContent='本机支持 '+sup.join(' / ')+' Hz —— 档位取自系统实际能力，点选即生效。';
+  const q=(id,txt)=>{const e=document.getElementById(id);if(e)e.textContent=txt;};
+  q('rr-en',   __rren?'已开启':'已关闭');
+  q('rr-held', __rrheld?('锁定 '+__rrheld+' Hz'):'已交还系统');
+  q('rr-nowv', __rrnow?(__rrnow+' Hz'):'—');
+  q('rr-sup',  sup.join(' / ')+' Hz');
 }
 
 /* ===== 操作按钮 ===== */
@@ -1011,6 +1136,14 @@ function bindOps(){
   };
   const dss=document.getElementById('dsSearch');
   if(dss)dss.oninput=()=>{renderDs();};
+  /* 刷新率：总开关 */
+  const rrw=document.getElementById('sw-rr');
+  if(rrw)rrw.onchange=e=>{
+    const v=e.target.checked?1:0;
+    __rren=!!v; renderRr();
+    dispatch(rrw,'rr='+v,v?'刷新率管理已开启':'刷新率管理已关闭（已还原你的原设置）',1400);
+  };
+  renderRr();   // 绑完先画一次，不必等下一个刷新周期
 }
 
 /* ===== 液态选择器：自绘底部弹层，替代系统原生下拉 ===== */

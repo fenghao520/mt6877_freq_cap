@@ -7,6 +7,7 @@ MODDIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
 [ -d "$MODDIR/scripts" ] || exit 0
 . "$MODDIR/scripts/util.sh"
 . "$MODDIR/scripts/dsleep.sh"
+. "$MODDIR/scripts/rrate.sh"
 
 # 等待开机完成
 i=0
@@ -28,6 +29,10 @@ ensure_cf
 # 若上次是「深睡中断电/强杀」而没走完还原流程，重启后必须照快照补还原，
 # 否则缩短过的常量会一直生效、系统会一直过度休眠。
 ds_cleanup
+
+# 刷新率残留还原：settings 是持久化数据，上次若没走完还原流程，
+# 开机必须照快照补还原，否则刷新率会一直被锁在上次的值上。
+rr_cleanup
 
 kill_daemon
 

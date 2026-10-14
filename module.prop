@@ -1,7 +1,7 @@
 id=mt6877_freq_cap
-name=天玑920限频（改编自若晴官调限频）
-version=v1.2.3
-versionCode=7
-author=fenghao · 改编自 ynltoto 若晴官调限频 v4.4
-description=仅限制CPU最高频率·走MTK PPM原生通道·不改调度。日用/游戏双模式 + 自定义频率 + 档位表覆盖 + 熄屏自动解锁。v1.2.0 深度睡眠逻辑改编自若晴：熄屏未充电自动进深度休眠，白名单保护，亮屏/充电立即还原。
+name=天玑920限频
+version=v1.2.4
+versionCode=9
+author=fenghao · 改编自 ynltoto
+description=仅限制CPU最高频率，配合官方调度，降低功耗发热。请在webui设置参数。
 action=action.sh

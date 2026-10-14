@@ -2,9 +2,10 @@ SKIPUNZIP=0
 
 . "$MODPATH/scripts/util.sh"
 MODDIR="$MODPATH"
+. "$MODPATH/scripts/rrate.sh"    # 安装时要用 rr_supported 打印本机支持的刷新率档位
 
 ui_print " "
-ui_print "  天玑920限频（复刻若晴官调限频 v4.4）"
+ui_print "  天玑920限频"
 ui_print "  作者 fenghao · 改编自 ynltoto · 控制通道 MTK PPM"
 ui_print " "
 
@@ -60,6 +61,7 @@ set_perm "$MODPATH/uninstall.sh"          0 0 0755
 set_perm "$MODPATH/scripts/util.sh"       0 0 0755
 set_perm "$MODPATH/scripts/daemon.sh"     0 0 0755
 set_perm "$MODPATH/scripts/dsleep.sh"     0 0 0755
+set_perm "$MODPATH/scripts/rrate.sh"      0 0 0755
 set_perm "$MODPATH/scripts/apply_once.sh" 0 0 0755
 set_perm "$MODPATH/scripts/ctl.sh"        0 0 0755
 
@@ -70,6 +72,8 @@ chmod 0777 "$CF_DIR" 2>/dev/null
 chmod 0666 "$CF_DIR/mode.conf" 2>/dev/null
 [ -f "$CF_DIR/dsleep.conf" ] || cp "$MODPATH/templates/dsleep.conf" "$CF_DIR/dsleep.conf" 2>/dev/null
 chmod 0666 "$CF_DIR/dsleep.conf" 2>/dev/null
+[ -f "$CF_DIR/rrate.conf" ] || cp "$MODPATH/templates/rrate.conf" "$CF_DIR/rrate.conf" 2>/dev/null
+chmod 0666 "$CF_DIR/rrate.conf" 2>/dev/null
 mkdir -p "$CF_DIR/ds" 2>/dev/null
 chmod 0777 "$CF_DIR/ds" 2>/dev/null
 [ -f "$CF_DIR/cmd" ] || : > "$CF_DIR/cmd" 2>/dev/null
@@ -80,5 +84,7 @@ ui_print "  v 安装完成，重启后生效"
 ui_print "  v WebUI 配置；执行按钮：音量+ 切档 / 音量- 卸载"
 ui_print "  v 深度睡眠：熄屏 20 秒未充电自动进深度休眠，白名单应用照常工作，"
 ui_print "     亮屏 / 充电 / 放音立即还原（默认关闭，在 WebUI「深睡」页开启）"
+ui_print "  v 刷新率管理：亮屏时按场景锁定刷新率，熄屏自动交还；卸载自动还原"
+ui_print "     （默认关闭，在 WebUI「刷新率」页开启；本机支持 $(rr_supported) Hz）"
 ui_print "  v 失控兜底：/sdcard/Android/mt6877_freq_cap/disable 建个空文件即全放开"
 ui_print " "

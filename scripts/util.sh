@@ -152,6 +152,7 @@ ensure_cf() {
     [ -f "$MODE_FILE" ]  || { cp "$MODDIR/templates/mode.conf" "$MODE_FILE" 2>/dev/null; chmod 0666 "$MODE_FILE"; }
     [ -f "$CF_FILE" ]    || { cp "$MODDIR/templates/custom_freq.conf" "$CF_FILE" 2>/dev/null; chmod 0666 "$CF_FILE"; }
     [ -f "$CF_DIR/dsleep.conf" ] || { cp "$MODDIR/templates/dsleep.conf" "$CF_DIR/dsleep.conf" 2>/dev/null; chmod 0666 "$CF_DIR/dsleep.conf"; }
+    [ -f "$CF_DIR/rrate.conf" ]  || { cp "$MODDIR/templates/rrate.conf"  "$CF_DIR/rrate.conf"  2>/dev/null; chmod 0666 "$CF_DIR/rrate.conf"; }
     mkdir -p "$CF_DIR/ds" 2>/dev/null
     chmod 0777 "$CF_DIR/ds" 2>/dev/null
     cp "$MODDIR/templates/README.txt" "$CF_DIR/使用说明.txt" 2>/dev/null
@@ -239,6 +240,23 @@ is_game() {
     grep -Fxq "$pkg" "$CONFDIR/games.list" 2>/dev/null && return 0
     grep -Fxq "$pkg" "$CF_DIR/mygames.list" 2>/dev/null && return 0
     return 1
+}
+
+# ---------- 时间窗 ----------
+NIGHT_FROM=0    # 夜间窗口起点（含）
+NIGHT_TO=6      # 夜间窗口终点（不含）
+
+# 夜间判定（默认 0:00 ~ 6:00），用于熄屏期间放宽巡检间隔。
+# 注意 date +%H 会补前导零（"08"），直接拿去做算术在部分 shell 里会被当八进制解析而报错，
+# 所以统一用 ${h#0} 去掉前导零，再走显式 if 分支（不写成 A||B&&C，那样可读性太差）。
+is_night() {
+    local h="${1:-}"
+    [ -n "$h" ] || h="$(date +%H 2>/dev/null)"
+    h="${h#0}"; [ -n "$h" ] || h=0
+    case "$h" in *[!0-9]*) return 1 ;; esac
+    if [ "$h" -lt "$NIGHT_FROM" ]; then return 1; fi
+    if [ "$h" -ge "$NIGHT_TO" ]; then return 1; fi
+    return 0
 }
 
 # ---------- 系统状态 ----------

@@ -13,6 +13,7 @@ MODDIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
 if [ -d "$MODDIR/scripts" ]; then
     . "$MODDIR/scripts/util.sh" 2>/dev/null
     . "$MODDIR/scripts/dsleep.sh" 2>/dev/null
+    . "$MODDIR/scripts/rrate.sh" 2>/dev/null
 fi
 
 # ① 先停守护，再动系统状态。
@@ -30,9 +31,14 @@ done
 #    ds_cleanup 内部对「无接管痕迹」的情况也会无条件解除 force-idle。
 [ -d "$MODDIR/scripts" ] && ds_cleanup 2>/dev/null
 
+# ③b 刷新率还原：min/peak_refresh_rate 同样是**持久化**设置，
+#     不改回来，卸载后刷新率会被一直锁在 60Hz（用户还以为是系统坏了）。
+[ -d "$MODDIR/scripts" ] && rr_cleanup 2>/dev/null
+
 # ④ 清掉运行时文件
 if [ -d "$MODDIR/scripts" ]; then
     rm -f "$CMD_FILE" "$STATE_FILE" "$DISABLE_FILE" "$DAEMON_PID_FILE" 2>/dev/null
+    rm -f "$CF_DIR/rrate.held" "$CF_DIR/rrate.saved" 2>/dev/null
     rm -rf "$CF_DIR/ds" 2>/dev/null
 fi
 rm -f /data/adb/mt6877_freq_cap.daemon.lock 2>/dev/null
