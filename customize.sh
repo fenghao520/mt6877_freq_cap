@@ -3,6 +3,7 @@ SKIPUNZIP=0
 . "$MODPATH/scripts/util.sh"
 MODDIR="$MODPATH"
 . "$MODPATH/scripts/rrate.sh"    # 安装时要用 rr_supported 打印本机支持的刷新率档位
+. "$MODPATH/scripts/hyper.sh"    # 安装时要用 hy_cap 打印实验功能的本机能力
 
 ui_print " "
 ui_print "  天玑920限频"
@@ -62,6 +63,7 @@ set_perm "$MODPATH/scripts/util.sh"       0 0 0755
 set_perm "$MODPATH/scripts/daemon.sh"     0 0 0755
 set_perm "$MODPATH/scripts/dsleep.sh"     0 0 0755
 set_perm "$MODPATH/scripts/rrate.sh"      0 0 0755
+set_perm "$MODPATH/scripts/hyper.sh"      0 0 0755
 set_perm "$MODPATH/scripts/apply_once.sh" 0 0 0755
 set_perm "$MODPATH/scripts/ctl.sh"        0 0 0755
 
@@ -74,6 +76,8 @@ chmod 0666 "$CF_DIR/mode.conf" 2>/dev/null
 chmod 0666 "$CF_DIR/dsleep.conf" 2>/dev/null
 [ -f "$CF_DIR/rrate.conf" ] || cp "$MODPATH/templates/rrate.conf" "$CF_DIR/rrate.conf" 2>/dev/null
 chmod 0666 "$CF_DIR/rrate.conf" 2>/dev/null
+[ -f "$CF_DIR/hyper.conf" ] || cp "$MODPATH/templates/hyper.conf" "$CF_DIR/hyper.conf" 2>/dev/null
+chmod 0666 "$CF_DIR/hyper.conf" 2>/dev/null
 mkdir -p "$CF_DIR/ds" 2>/dev/null
 chmod 0777 "$CF_DIR/ds" 2>/dev/null
 [ -f "$CF_DIR/cmd" ] || : > "$CF_DIR/cmd" 2>/dev/null
@@ -84,6 +88,8 @@ ui_print "  v 安装完成，重启后生效"
 ui_print "  v WebUI 配置；执行按钮：音量+ 切档 / 音量- 卸载"
 ui_print "  v 深度睡眠：熄屏 20 秒未充电自动进深度休眠，白名单应用照常工作，"
 ui_print "     亮屏 / 充电 / 放音立即还原（默认关闭，在 WebUI「深睡」页开启）"
+ui_print "  v 实验功能（首页开关）：CPU/GPU/DDR 全部拉满，仅供跑分使用"
+ui_print "     本机能力探测：CPU下限=$(hy_cap cpu) GPU锁频=$(hy_cap gpu) DDR锁频=$(hy_cap ddr)（1=可用）"
 ui_print "  v 刷新率管理：亮屏时按场景锁定刷新率，熄屏自动交还；卸载自动还原"
 ui_print "     （默认关闭，在 WebUI「刷新率」页开启；本机支持 $(rr_supported) Hz）"
 ui_print "  v 失控兜底：/sdcard/Android/mt6877_freq_cap/disable 建个空文件即全放开"

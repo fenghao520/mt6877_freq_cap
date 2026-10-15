@@ -10,6 +10,13 @@ MODDIR="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
 . "$MODDIR/scripts/util.sh"
 . "$MODDIR/scripts/dsleep.sh"
 . "$MODDIR/scripts/rrate.sh"
+. "$MODDIR/scripts/hyper.sh"
+
+# 能力探测只做一次（要扫 /proc、/sys 的通配路径，不适合每轮跑），结果缓存给状态用
+hy_detect >/dev/null 2>&1
+HYC_GPU="$([ -n "$HY_GPU_NODE" ] && echo 1 || echo 0)"
+HYC_DDR="$([ -n "$HY_DDR_NODE" ] && echo 1 || echo 0)"
+HYC_CPU="$([ -n "$HY_CPU_NODES" ] && echo 1 || echo 0)"
 
 # 记录自身 PID，供 kill_daemon / 状态查询精确定位（避免按字符串扫 cmdline 误伤其它进程）
 echo $$ > "$DAEMON_PID_FILE" 2>/dev/null
@@ -43,6 +50,8 @@ FG_PKG=""
 FG_TS=0
 DS_SINCE=""        # 本次熄屏起点（深睡宽限计时用；由 dsleep.sh 读取/清空）
 PPM_FAIL=0         # 连续写 PPM 失败次数（≥3 才写进 state.conf 报警，偶发一次不惊动用户）
+HY_TICK=0          # 满血自愈的 IO 复查节流计数
+HY_FIXES=0         # 满血自愈次数（写进 state.conf，让用户看得见「自动修过几次」）
 RR_NOW=""          # 刷新率「实际生效值」缓存（dumpsys 较重，节流刷新）
 RR_SUP=""          # 本机支持的刷新率档位（只探一次就缓存）
 RR_TICK=0
@@ -101,6 +110,13 @@ log_line() { # screen fg scene mode c0 c1 [disabled]
         echo "rrnow=$_now"
         echo "rrsup=$RR_SUP"
         echo "warn=$_warn"
+        # ---- 实验功能（全部拉满）----
+        echo "hy=$([ -f "$HY_MARK" ] && echo 1 || echo 0)"
+        echo "hygpu=$HYC_GPU"
+        echo "hyddr=$HYC_DDR"
+        echo "hycpu=$HYC_CPU"
+        echo "hyfail=$(hy_fails)"
+        echo "hyfix=$(hy_fixes)"
     } > "$STATE_FILE.tmp" 2>/dev/null
     chmod 0644 "$STATE_FILE.tmp" 2>/dev/null
     mv -f "$STATE_FILE.tmp" "$STATE_FILE" 2>/dev/null \
@@ -176,7 +192,9 @@ process_cmd() {
             rr=*)      rr_conf_set enable "${line#rr=}" ;;
             rrdaily=*) rr_conf_set daily "${line#rrdaily=}" ;;
             rrgame=*)  rr_conf_set game  "${line#rrgame=}"  ;;
-            stop)    ds_exit; rr_drop; ppm_release; rm -f "$DAEMON_PID_FILE" 2>/dev/null; exit 0 ;;
+            # ---- 实验功能（全部拉满）----
+            hyper=*)   hy_conf_set "${line#hyper=}" ;;
+            stop)    ds_exit; rr_drop; hy_exit; ppm_release; rm -f "$DAEMON_PID_FILE" 2>/dev/null; exit 0 ;;
         esac
     done < "$_snap"
     rm -f "$_snap" 2>/dev/null
@@ -218,6 +236,8 @@ while true; do
         [ -f "$DS_ACT" ] && ds_exit
         # 刷新率同理：停用就该把控制权还给系统，不然「刷新率锁定」会一直留着
         rr_drop
+        # 实验功能更要还原：它改的是 CPU 上下限 + GPU/DDR 档位，留着会一直满血
+        [ -f "$HY_MARK" ] && hy_exit
         log_line off "" "" "" -1 -1 1
         sleep 10
         continue
@@ -268,6 +288,50 @@ while true; do
         scene=game
     else
         scene=daily
+    fi
+
+    # 4.5) 实验功能（全部拉满）：优先级最高 —— 开启后直接覆盖日用/游戏，跳过整套档位计算。
+    #      CPU 两簇写硬件最大 + GPU/DDR 锁最高档，都在 hy_enter 里完成。
+    if [ "$(hy_enabled)" = "1" ]; then
+        if [ ! -f "$HY_MARK" ]; then
+            hy_enter
+        else
+            # 自愈复查：满血状态一旦被外部冲掉（别处调一次 ppm_release、或某次写入
+            # 半途失败），「只在开启时应用一次」的写法就再也回不来 ——
+            # 用户看到的现象是「开关明明开着，下限却是 -1」。
+            # CPU 只读 4 个 /proc 节点，很便宜 → 每轮查；
+            # GPU/DDR 要读完整 dvfsrc_dump，较贵 → 每 5 轮查一次。
+            HY_TICK=$((HY_TICK + 1))
+            if hy_verify_cpu; then
+                if [ "$HY_TICK" -ge 5 ]; then
+                    HY_TICK=0
+                    if ! hy_verify_io; then
+                        hy_apply >/dev/null 2>&1
+                        HY_FIXES=$((HY_FIXES + 1))
+                    fi
+                fi
+            else
+                hy_apply >/dev/null 2>&1
+                HY_FIXES=$((HY_FIXES + 1))
+            fi
+        fi
+        # 刷新率按「游戏档」取值 —— 跑分当然要最高刷，不能被日用档的 60Hz 压住
+        if [ "$(rr_enabled)" = "1" ]; then
+            rr_take "$(rr_rate_for game)"
+        else
+            rr_drop
+        fi
+        log_line on "$FG_PKG" hyper hyper "$(cpu_max 0)" "$(cpu_max 1)" 0
+        sleep "$TICK_ON"
+        continue
+    fi
+    # 关掉之后要把满血交还（只做一次：标记文件没了就不会再进来）
+    # 必须同时清掉 LAST_SIG：hy_exit 会把上限写回 -1，而此刻算出来的目标值
+    # 与 hyper 之前的签名**完全相同** → 「值没变就不重写」的优化会让它跳过，
+    # 结果上限一直停在「不限」，直到场景或档位变化才恢复。
+    if [ -f "$HY_MARK" ]; then
+        hy_exit
+        LAST_SIG=""
     fi
 
     # 5) 档位：开机提速 > 场景全局档位

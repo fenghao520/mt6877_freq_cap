@@ -1,7 +1,7 @@
 id=mt6877_freq_cap
 name=天玑920限频
-version=v1.2.4
-versionCode=9
+version=v1.2.5
+versionCode=10
 author=fenghao · 改编自 ynltoto
 description=仅限制CPU最高频率，配合官方调度，降低功耗发热。请在webui设置参数。
 action=action.sh

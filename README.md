@@ -11,7 +11,7 @@
 ![platform](https://img.shields.io/badge/SoC-MediaTek%20MT6877-1565C0?style=flat-square)
 ![root](https://img.shields.io/badge/root-KernelSU-00897B?style=flat-square)
 ![android](https://img.shields.io/badge/Android-16-3DDC84?style=flat-square)
-![version](https://img.shields.io/badge/version-v1.2.4-0288D1?style=flat-square)
+![version](https://img.shields.io/badge/version-v1.2.5-0288D1?style=flat-square)
 
 </div>
 
@@ -47,6 +47,7 @@
 | **深度睡眠** | 熄屏未充电未放音满 20 秒自动接管系统 Doze，亮屏 / 充电 / 放音立即逐项还原 |
 | **刷新率管理** | 亮屏时按场景锁定刷新率（日用 / 游戏分开设），熄屏自动交还系统。走 AOSP 标准接口，默认关闭 |
 | **夜间放宽巡检** | 深睡开启时，0~6 点熄屏巡检由 3 秒放宽到 10 秒，减少整夜无谓唤醒 |
+| **实验功能（全部拉满）** | 首页开关：CPU 上下限贴死 + GPU 锁最高档 + DDR 锁最高档，覆盖日用/游戏模式。**仅供跑分**，默认关闭 |
 | **开机提速** | 系统开机后约 100 秒内按「极速」运行，避免开机卡顿 |
 | **热重载** | 改配置文件后 3 秒内自动生效，无需重启 |
 | **WebUI** | 玻璃拟态界面、日间/夜间双主题、5 个页签，全部操作点一下即生效 |
@@ -93,7 +94,7 @@
 
 ## 安装
 
-1. 下载 [Releases](../../releases) 里的 `mt6877_freq_cap_v1.2.4.zip`
+1. 下载 [Releases](../../releases) 里的 `mt6877_freq_cap_v1.2.5.zip`
 2. KernelSU 管理器 → 模块 → 从本地安装 → 选这个 zip
 3. **重启手机**（KernelSU 装完必须重启才真正生效，否则 `modules` 和 `modules_update` 会同时存在两个版本）
 4. 重启后在 KernelSU 管理器点本模块的「打开 WebUI」开始配置
@@ -216,6 +217,9 @@ WebUI 会标明当前口径。
 | `rrate.conf` | 刷新率管理：`enable=0/1` · `daily=Hz` · `game=Hz` |
 | `rrate.saved` | 刷新率原值快照（`min` / `peak`），用于还原 |
 | `rrate.held` | 存在 = 当前正被模块锁着，内容是锁定的 Hz |
+| `hyper.conf` | 实验功能：`enable=0/1` |
+| `hyper.saved` | 实验功能的原值快照（CPU 下限 / GPU / DDR），用于还原 |
+| `hyper.on` | 存在 = 当前处于满血状态；内容是未完成项清单 |
 
 **优先级**：全局自定义 > 档位表覆盖 > 内置预设表 > 硬件最大值
 
@@ -361,6 +365,7 @@ mt6877_freq_cap/
 │   ├── daemon.sh                # 守护进程：场景判定 → 写 PPM 上限
 │   ├── dsleep.sh                # 深度睡眠：Doze 接管 / 还原 / 唤醒统计
 │   ├── rrate.sh                 # 刷新率管理：AOSP min/peak_refresh_rate + 快照回滚
+│   ├── hyper.sh                 # 实验功能：CPU/GPU/DDR 全部拉满（含能力探测与降级）
 │   ├── ctl.sh                   # 命令行控制台
 │   └── apply_once.sh            # 一次性应用
 ├── templates/                   # 默认配置与使用说明
@@ -372,6 +377,23 @@ mt6877_freq_cap/
 ---
 
 ## 变更记录
+
+### v1.2.5
+
+- 新增**实验功能**（WebUI 首页开关，默认关闭）：开启后**立刻全局生效并覆盖日用 / 游戏模式** ——
+  CPU 两簇上下限贴死、**GPU 锁到 OPP 最高档**、**DDR 锁到最高档**；关闭立即恢复。
+  **仅供跑分使用**，功耗与发热显著上升，长时间用建议配外部散热器。
+- 走 MTK 通用接口（`gpufreq/gpufreq_opp_freq`、`helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp`），
+  **本机支持与否由守护开机探测后上报**，不支持的会在开关下方标成「本机无」——不假装成功。
+- **自愈机制**：这几个内核值不是本模块独占的，别的组件也能改。所以守护**每轮复查**
+  （CPU 每 3 秒、GPU/DDR 约每 15 秒），发现被改回去就立刻写回；
+  开关下方显示「已自动修复 N 次」，正常应恒为 0。
+- **UI 点击即时切换**：档位胶囊 / 开关 / 白名单增删 / 停用·恢复按钮改为**乐观更新** ——
+  点击后先改本地状态并立即重绘，再下发命令，失败则回滚。
+  （原实现要等守护下一轮巡检写入 `state.conf` 再叠一次刷新，实测有 3~5 秒延迟。）
+- 顺带修了两处隐患：`ppm_release` 在节点不存在时重定向失败会返回非 0（在 `set -e` 下会让脚本静默退出）；
+  `hy_detect` 探测函数不该把「找不到节点」的失败码传出去。
+- 这些节点都是内核运行时状态，**重启一定清零**。
 
 ### v1.2.4
 

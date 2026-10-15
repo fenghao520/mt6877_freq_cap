@@ -109,6 +109,9 @@
   .card h2 .bar{width:4px;height:15px;border-radius:3px;
     background:linear-gradient(180deg,var(--cy),var(--cy2));
     box-shadow:0 0 10px var(--glow-cy),inset 0 1px 0 rgba(255,255,255,.35);}
+  /* 实验功能：标题条换成警示色，和普通卡片区分开 */
+  .card.exp h2 .bar{background:linear-gradient(180deg,var(--rd),#c94a63);
+    box-shadow:0 0 10px var(--glow-rd),inset 0 1px 0 rgba(255,255,255,.35);}
   .hint{font-size:12px;color:var(--sub);margin:2px 0 12px;}
   .hint:last-child{margin-bottom:0;}
   .subt{margin:12px 0 6px;font-size:13.5px;font-weight:600;}
@@ -390,6 +393,21 @@
         <div class="pills" id="pills-game"></div>
         <div class="hint" id="modeNote"></div>
       </div>
+
+      <!-- 实验功能放最后：它是「破坏性」开关，不该在第一眼就顺手点开 -->
+      <div class="card exp">
+        <h2><span class="bar"></span>实验功能</h2>
+        <div class="row">
+          <div class="ic">🔥</div>
+          <div class="meta"><b>全部拉满</b><span id="hySub">CPU / GPU / DDR 频率全部拉满，仅供跑分使用</span></div>
+          <label class="sw"><input type="checkbox" id="sw-hy"><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="hint">开启后<b>立刻全局生效，覆盖日用 / 游戏模式</b>：两簇上下限贴死、GPU 锁最高档、DDR 锁最高档。
+          关闭立即恢复成原来的日用 / 游戏模式。</div>
+        <div class="hint" style="color:var(--rd)">⚠️ 仅供跑分使用。功耗与发热显著上升，长时间使用建议配外部散热器，
+          玩游戏前请先关闭。所有改动都是内核运行时状态，<b>重启一定清零</b>。</div>
+        <div class="hint" id="hyStatus" style="display:none"></div>
+      </div>
     </div>
 
     <!-- ============ 频率 ============ -->
@@ -536,7 +554,7 @@
       <div class="card about">
         <h2><span class="bar"></span>关于</h2>
         <div class="kv"><span class="k">模块</span><span class="v">天玑920限频</span></div>
-        <div class="kv"><span class="k">版本</span><span class="v" id="ab-ver">v1.2.4</span></div>
+        <div class="kv"><span class="k">版本</span><span class="v" id="ab-ver">v1.2.5</span></div>
         <div class="kv"><span class="k">目标 SoC</span><span class="v">MT6877 天玑920</span></div>
         <div class="kv"><span class="k">控制通道</span><span class="v">/proc/ppm/policy/*</span></div>
         <div class="kv"><span class="k">配置目录</span><span class="v">/sdcard/Android/<br>mt6877_freq_cap</span></div>
@@ -550,6 +568,19 @@
           直接进入深度休眠。亮屏、插电或放音<b>立即逐项还原</b>。</p>
         <p>只收窄「用户级」白名单，系统自带的来电 / 短信 / 闹钟 / IMS 条目一律不动。接管前会把原值与改动清单
           落盘，守护被杀、模块卸载、重新开机都会照它补还原，不会残留系统状态。</p>
+        <h3>实验功能 · 全部拉满（v1.2.5 新增）</h3>
+        <p>首页那个开关。开启后<b>立刻全局生效并覆盖日用/游戏模式</b>：CPU 两簇上下限贴死、GPU 锁到 OPP 最高档、DDR 锁到最高档。
+          关闭立即恢复成原来的日用/游戏模式。</p>
+        <p><b>仅供跑分使用</b>：功耗与发热显著上升，长时间使用建议配外部散热器，玩游戏前请先关闭。</p>
+        <p>用到的节点：CPU 走我们自己的 PPM 通道（有把握）；GPU / DDR 走 MTK 的通用接口
+          （<code>gpufreqv2/fix_target_opp_index</code>、<code>helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp</code>），
+          <b>本机是否支持由守护开机探测后上报</b>，不支持的会在开关下方标成「本机无」——
+          做不到就如实说，不假装成功。</p>
+        <p>这些节点都是<b>内核运行时状态，重启一定清零</b>，所以即使还原失败也不会留下永久影响；
+          但停用模块、卸载、重新开机时仍会照快照尝试还原。</p>
+        <p><b>自愈机制</b>：内核里这几个值不是本模块独占的，别的组件也能改。所以守护<b>每轮都会复查</b>，
+          发现被改回去就立刻写回（CPU 每 3 秒查、GPU/DDR 每约 15 秒查）。开启了自愈次数会显示在开关下方 ——
+          正常情况下应该一直是 0；不是 0 就说明有别的组件在和它抢，可以据此排查冲突。</p>
         <h3>刷新率管理（v1.2.4 新增）</h3>
         <p>亮屏时按<b>当前场景</b>把刷新率锁定在你选的档位，<b>熄屏自动交还系统</b>（息屏显示不受影响），
           亮屏再锁回来。用的是 AOSP 标准设置项 <code>min_refresh_rate</code> / <code>peak_refresh_rate</code>，
@@ -655,7 +686,7 @@ const CMD=D+'/cmd', STATEF=D+'/state.conf', MODEF=D+'/mode.conf',
       CUSTOMF=D+'/custom_freq.conf', TIERF=D+'/tier_freq.conf';
 
 const MODES=[['powersave','省电'],['balance','均衡'],['performance','性能'],['fast','极速']];
-const MODE_CN={powersave:'省电',balance:'均衡',performance:'性能',fast:'极速'};
+const MODE_CN={powersave:'省电',balance:'均衡',performance:'性能',fast:'极速',hyper:'满血'};
 
 /* 内置预设（与 presets/MT6877.conf 完全一致，单位 kHz） */
 const PRESET={
@@ -705,6 +736,20 @@ async function dispatch(btn,cmd,okMsg,retryMs){
   return good;
 }
 
+/* ===== 乐观更新下发 =====
+   点击后**先改本地状态并立即重绘**，再下发命令；失败则回滚。
+   为什么必须这样：选中态原本只由 refresh() 从 state.conf 读回来，而 state.conf
+   要等守护下一轮巡检（最长 3 秒）才写入，再叠上 2.5 秒的刷新周期 ——
+   用户点完要等三五秒按钮才跳过去，视觉上就是「点了没反应」。
+   安全性：乐观更新只碰「显示用的本地变量」。真正的权威值仍是守护回读的
+   state.conf，下一次 refresh 会把它覆盖掉，所以不会出现「界面与实际不一致」。 */
+async function dispatchOpt(btn,cmd,okMsg,retryMs,apply,revert){
+  if(apply)apply();
+  const good=await dispatch(btn,cmd,okMsg,retryMs);
+  if(!good&&revert)revert();
+  return good;
+}
+
 /* ===== 状态 ===== */
 let __md='balance',__mg='fast',__dis=false,__running=false,__connFail=0;
 let __lastState='';   // 最近一次成功读到的 state.conf（读取偶发失败时用它兜底，页面不闪「未运行」）
@@ -713,6 +758,8 @@ let __ds=false,__dsact=false,__dswhite='',__dsw='',__dswunit='alarm',__dsgrace=2
 /* 刷新率 */
 let __rren=false,__rrdaily=60,__rrgame=120,__rrheld='',__rrnow='',__rrsup='60,120';
 let __warn='';   // 守护上报的告警（如 ppm_write_fail）
+/* 实验功能（全部拉满） */
+let __hy=false,__hycpu='0',__hygpu='0',__hyddr='0',__hyfail='',__hyfix=0;
 function renderState(o){
   const box=document.getElementById('stateBody');
   const nowSec=(Date.now()/1000)|0;
@@ -730,6 +777,9 @@ function renderState(o){
   {const d=Number(o.rrdaily);if(d>0)__rrdaily=d;
    const g2=Number(o.rrgame);if(g2>0)__rrgame=g2;}
   if(o.rrsup)__rrsup=o.rrsup;
+  /* 实验功能 */
+  __hy=o.hy==='1';__hycpu=o.hycpu||'0';__hygpu=o.hygpu||'0';__hyddr=o.hyddr||'0';__hyfail=o.hyfail||'';
+  __hyfix=Number(o.hyfix)||0;
   // 偶发一次读取失败不立刻翻脸（WebUI 的 exec 有随机超时），连续 3 次才显示未连接
   if(!o.ts){ __connFail++; if(__connFail>=3) setConn(false); }
   else { __connFail=0; setConn(true); }
@@ -745,15 +795,21 @@ function renderState(o){
                  :(released?'<span class="badge warn">已放开</span>':'<span class="badge on">启用</span>'));
   h+=kv('屏幕', o.screen==='on'?'亮':'灭 <span style="color:var(--mut);font-weight:500">（已放开）</span>');
   h+=kv('前台应用', (o.fg||'-').replace(/&/g,'&amp;').replace(/</g,'&lt;'));
-  h+=kv('场景', o.scene==='game'?'<span class="badge game">游戏</span>':'<span class="badge daily">日用</span>');
+  h+=kv('场景', o.scene==='hyper'?'<span class="badge off">实验·满血</span>'
+        :(o.scene==='game'?'<span class="badge game">游戏</span>':'<span class="badge daily">日用</span>'));
   h+=kv('档位', MODE_CN[o.mode]||o.mode||'-');
   h+=kv('小核 A55 上限', limFreq(o,'c0'));
   h+=kv('大核 A78 上限', limFreq(o,'c1'));
   h+=kv('实时频率', fmtN(o.c0_cur)+' / '+fmtN(o.c1_cur)+' <span style="color:var(--mut);font-weight:500">MHz</span>');
   box.innerHTML=h;
 
+  noteOps();
+}
+/* 单抽出来：停用/恢复 的按钮文案随 __dis 走，供乐观更新即时调用 */
+function noteOps(){
   const tg=document.getElementById('tgTitle'),td=document.getElementById('tgDesc');
-  if(dis){tg.textContent='恢复限频';td.textContent='重新启用按场景/档位限制';}
+  if(!tg)return;
+  if(__dis){tg.textContent='恢复限频';td.textContent='重新启用按场景/档位限制';}
   else{tg.textContent='停用限频';td.textContent='持久停用（熄屏也不限频），随时可再开';}
 }
 function kv(k,v){return '<div class="kv"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';}
@@ -781,7 +837,12 @@ function buildPills(){
       b.textContent=cn;b.dataset.mode=m;b.dataset.slot=slot;
       /* 即使点的就是当前档位，也照样下发一次 —— 守护收到 mode_* 会无条件重新接管
          （对应「立即恢复不限」之后的「点任一档位即重新接管」） */
-      b.onclick=()=>dispatch(b,'mode_'+slot+'='+m,'已切换'+(slot==='daily'?'日用':'游戏')+'：'+cn,900);
+      b.onclick=()=>{
+        const prev=(slot==='daily')?__md:__mg;
+        const set=v=>{ if(slot==='daily')__md=v; else __mg=v; markPills(); noteMode(); };
+        dispatchOpt(b,'mode_'+slot+'='+m,'已切换'+(slot==='daily'?'日用':'游戏')+'：'+cn,900,
+          ()=>set(m), ()=>set(prev));
+      };
       box.appendChild(b);
     });
   });
@@ -790,6 +851,21 @@ function markPills(){
   [['pills-daily',__md],['pills-game',__mg]].forEach(([id,cur])=>{
     [].forEach.call(document.getElementById(id).children,b=>b.classList.toggle('on',b.dataset.mode===cur));
   });
+}
+/* 单独抽出来：档位切换时要立刻刷新这行说明，不能等下一次 refresh */
+function noteMode(){
+  const note=document.getElementById('modeNote');
+  if(note)note.textContent='当前：日用 = '+(MODE_CN[__md]||__md)+'　游戏 = '+(MODE_CN[__mg]||__mg);
+}
+/* 白名单乐观增删：先改本地 __dswhite 并立刻重绘（条目当场消失/出现），
+   返回上一个值供失败回滚。真正的权威值仍以守护回读为准。 */
+function wlSet(pkg,add){
+  const prev=__dswhite;
+  let l=(__dswhite||'').split(',').filter(x=>x&&x!==pkg);
+  if(add)l.push(pkg);
+  __dswhite=l.join(',');
+  renderDs();
+  return prev;
 }
 
 /* ===== 档位表 ===== */
@@ -974,7 +1050,11 @@ async function renderDs(){
                   '<button type="button" class="mini warn" data-dsdel="'+esc(p)+'">移除</button></div>').join('')
       : '<div class="empty">白名单为空 —— 熄屏后所有应用都会被强制休眠</div>';
     we.querySelectorAll('[data-dsdel]').forEach(b=>{
-      b.onclick=()=>dispatch(b,'dsdel='+b.dataset.dsdel,'已移出白名单',1200);
+      b.onclick=()=>{
+        const prev=wlSet(b.dataset.dsdel,false);   // 条目当场消失
+        dispatchOpt(b,'dsdel='+b.dataset.dsdel,'已移出白名单',1200,null,
+          ()=>{ __dswhite=prev; renderDs(); });
+      };
     });
   }
 
@@ -994,7 +1074,11 @@ async function renderDs(){
           '<button type="button" class="mini go" data-dsadd="'+esc(p)+'">加入白名单</button></div>').join('')
       : '<div class="empty">'+(apps.length?'没有匹配的应用了':'读不到应用列表，确认 WebUI 有 root 权限')+'</div>';
     ae.querySelectorAll('[data-dsadd]').forEach(b=>{
-      b.onclick=()=>dispatch(b,'dsadd='+b.dataset.dsadd,'已加入白名单',1200);
+      b.onclick=()=>{
+        const prev=wlSet(b.dataset.dsadd,true);    // 条目当场进白名单
+        dispatchOpt(b,'dsadd='+b.dataset.dsadd,'已加入白名单',1200,null,
+          ()=>{ __dswhite=prev; renderDs(); });
+      };
     });
   }
 
@@ -1015,7 +1099,11 @@ async function renderDs(){
         }).join('')
       : '<div class="empty">暂无统计 —— 经历一次完整熄屏深睡后出榜</div>';
     ke.querySelectorAll('[data-dsadd]').forEach(b=>{
-      b.onclick=()=>dispatch(b,'dsadd='+b.dataset.dsadd,'已加入白名单',1200);
+      b.onclick=()=>{
+        const prev=wlSet(b.dataset.dsadd,true);
+        dispatchOpt(b,'dsadd='+b.dataset.dsadd,'已加入白名单',1200,null,
+          ()=>{ __dswhite=prev; renderDs(); });
+      };
     });
   }
 }
@@ -1031,7 +1119,7 @@ async function refresh(){
       await new Promise(r=>setTimeout(r,260));
       s=await sh('cat '+STATEF);
     }
-    if(s.trim()||!__lastState){ if(s.trim())__lastState=s; renderState(parseKv(__lastState)); renderWarn(); }
+    if(s.trim()||!__lastState){ if(s.trim())__lastState=s; renderState(parseKv(__lastState)); renderWarn(); renderHyper(); }
     // 深睡页可见时才重绘（renderDs 会去读一次已安装应用表，别在后台白跑）
     const dsp=document.getElementById('p-ds');
     if(dsp&&dsp.classList.contains('on'))await renderDs();
@@ -1042,8 +1130,7 @@ async function refresh(){
     if(m.mode_daily)__md=m.mode_daily;
     if(m.mode_game)__mg=m.mode_game;
     markPills();
-    const note=document.getElementById('modeNote');
-    note.textContent='当前：日用 = '+MODE_CN[__md]+'　游戏 = '+MODE_CN[__mg];
+    noteMode();
   } finally { __busy=false; }
 }
 
@@ -1059,6 +1146,30 @@ function renderWarn(){
     +'<br>常见原因：与其它调度/性能模块冲突，或节点被系统服务接管。'
     +'<br>建议：先点本页「重启守护」；仍报警就把「安全」页的「立即恢复不限」点一次，'
     +'再排查是否装了别的调速模块。');
+}
+
+/* ===== 实验功能（全部拉满） =====
+   实话说清楚：CPU 那部分是我们自己写 PPM 节点，有把握；
+   GPU / DDR 是 MTK 的通用接口，本机是否支持由守护探测后上报，
+   不支持的会在下面标成「本机无」——不假装成功。 */
+let __hySig='';
+function renderHyper(){
+  const sw=document.getElementById('sw-hy');if(!sw)return;
+  sw.checked=__hy;
+  const sub=document.getElementById('hySub');
+  if(sub)sub.textContent=__hy?'已开启 · 正以满血运行':'CPU / GPU / DDR 频率全部拉满，仅供跑分使用';
+  const st=document.getElementById('hyStatus');
+  if(!st)return;
+  const sig=[__hy,__hycpu,__hygpu,__hyddr,__hyfail,__hyfix].join('|');
+  if(sig===__hySig)return;__hySig=sig;
+  if(!__hy){st.style.display='none';st.innerHTML='';return;}
+  st.style.display='';
+  const cap=(v,name)=>'<span class="badge '+(v==='1'?'on':'warn')+'">'+name+(v==='1'?' ✓':' 本机无')+'</span>';
+  st.innerHTML=cap(__hycpu,'CPU 上下限')+' '+cap(__hygpu,'GPU 锁频')+' '+cap(__hyddr,'DDR 锁频')
+    +'<br>当前覆盖日用 / 游戏模式；关闭即恢复。'
+    +(__hyfix>0?('<br>已自动修复 '+__hyfix+' 次 —— 满血状态被外部改动过，守护把它写回来了。'
+                 +'（内核里这几个值不是独占的，别的组件也能改；正常情况下次数应该一直是 0）'):'')
+    +(__hyfail?('<br><b style="color:var(--rd)">未完成：'+esc(__hyfail)+'（该节点本机不可用或写入被拒）</b>'):'');
 }
 
 /* ===== 刷新率 ===== */
@@ -1091,8 +1202,16 @@ function renderRr(){
         '<button type="button" class="pill'+(Number(h)===Number(cur)?' on':'')+
         '" data-slot="'+slot+'" data-hz="'+h+'">'+h+' Hz</button>').join('');
       el.querySelectorAll('[data-slot]').forEach(b=>{
-        b.onclick=()=>dispatch(b,'rr'+b.dataset.slot+'='+b.dataset.hz,
-                               '已切换'+(b.dataset.slot==='game'?'游戏':'日用')+'：'+b.dataset.hz+' Hz',1000);
+        b.onclick=()=>{
+          const slot=b.dataset.slot,hz=Number(b.dataset.hz);
+          const prev=(slot==='game')?__rrgame:__rrdaily;
+          const set=v=>{ if(slot==='game')__rrgame=v; else __rrdaily=v;
+                         __rrBuilt=''; renderRr(); };
+          // 乐观更新：立刻把胶囊跳过去，不等守护回写 state.conf
+          dispatchOpt(b,'rr'+slot+'='+b.dataset.hz,
+            '已切换'+(slot==='game'?'游戏':'日用')+'：'+hz+' Hz',1000,
+            ()=>set(hz), ()=>set(prev));
+        };
       });
     };
     mk('rr-daily',__rrdaily,'daily');
@@ -1113,7 +1232,9 @@ function bindOps(){
   document.getElementById('op-restore').onclick=e=>dispatch(e.currentTarget,'restore','已恢复不限（保持放开）',900);
   document.getElementById('op-toggle').onclick=e=>{
     const dis=__dis;
-    dispatch(e.currentTarget,dis?'enable':'disable',dis?'已恢复限频':'已停用限频',1100);
+    __dis=!dis; noteOps();   // 乐观：文案立刻翻转
+    dispatchOpt(e.currentTarget,dis?'enable':'disable',dis?'已恢复限频':'已停用限频',1100,null,
+      ()=>{ __dis=dis; noteOps(); });
   };
   document.getElementById('op-restart').onclick=e=>dispatch(e.currentTarget,'restart','正在重启守护…',2500);
   document.getElementById('op-stop').onclick=e=>dispatch(e.currentTarget,'stop','已停守护并恢复不限',1200);
@@ -1130,9 +1251,12 @@ function bindOps(){
   const dsw=document.getElementById('sw-ds');
   if(dsw)dsw.onchange=e=>{
     const v=e.target.checked?1:0;
+    const prev=__ds,prevAct=__dsact;
+    __ds=!!v;
     if(!v&&__dsact)__dsact=false;
-    renderDs();
-    dispatch(dsw,'ds='+v,v?'深度睡眠已开启':'深度睡眠已关闭',1200);
+    renderDs();   // 乐观：开关与下面的状态行立刻跟上，不等守护回读
+    dispatchOpt(dsw,'ds='+v,v?'深度睡眠已开启':'深度睡眠已关闭',1200,null,
+      ()=>{ __ds=prev; __dsact=prevAct; renderDs(); });
   };
   const dss=document.getElementById('dsSearch');
   if(dss)dss.oninput=()=>{renderDs();};
@@ -1144,6 +1268,15 @@ function bindOps(){
     dispatch(rrw,'rr='+v,v?'刷新率管理已开启':'刷新率管理已关闭（已还原你的原设置）',1400);
   };
   renderRr();   // 绑完先画一次，不必等下一个刷新周期
+  /* 实验功能：总开关 */
+  const hysw=document.getElementById('sw-hy');
+  if(hysw)hysw.onchange=e=>{
+    const v=e.target.checked?1:0;
+    __hy=!!v;renderHyper();
+    dispatch(hysw,'hyper='+v,
+      v?'实验功能已开启：全部拉满，已覆盖日用/游戏':'实验功能已关闭，已恢复日用/游戏模式',1500);
+  };
+  renderHyper();
 }
 
 /* ===== 液态选择器：自绘底部弹层，替代系统原生下拉 ===== */

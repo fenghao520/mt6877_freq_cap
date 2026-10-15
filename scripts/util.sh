@@ -129,7 +129,19 @@ ppm_set() {
     return 0
 }
 
-ppm_release() { local c; for c in 0 1; do echo -1 > "$(ppm_node "$c")" 2>/dev/null; done; }
+# 放开两簇上限。
+# 必须先判存在再写：直接 `echo -1 > 不存在路径 2>/dev/null` 时，
+# 重定向是在 2>/dev/null 生效**之前**失败的，错误照样打到 stderr，
+# 并且整体返回非 0 —— 在 `set -e` 或 `&&` 链里调用会导致脚本静默退出。
+ppm_release() {
+    local c n
+    for c in 0 1; do
+        n="$(ppm_node "$c")"
+        [ -e "$n" ] || continue
+        echo -1 > "$n" 2>/dev/null
+    done
+    return 0
+}
 
 # 把 kHz 对齐到真实可选频点（仅用于显示/预估，内核自身也会对齐）
 clamp_freq() {
@@ -153,6 +165,7 @@ ensure_cf() {
     [ -f "$CF_FILE" ]    || { cp "$MODDIR/templates/custom_freq.conf" "$CF_FILE" 2>/dev/null; chmod 0666 "$CF_FILE"; }
     [ -f "$CF_DIR/dsleep.conf" ] || { cp "$MODDIR/templates/dsleep.conf" "$CF_DIR/dsleep.conf" 2>/dev/null; chmod 0666 "$CF_DIR/dsleep.conf"; }
     [ -f "$CF_DIR/rrate.conf" ]  || { cp "$MODDIR/templates/rrate.conf"  "$CF_DIR/rrate.conf"  2>/dev/null; chmod 0666 "$CF_DIR/rrate.conf"; }
+    [ -f "$CF_DIR/hyper.conf" ]  || { cp "$MODDIR/templates/hyper.conf"  "$CF_DIR/hyper.conf"  2>/dev/null; chmod 0666 "$CF_DIR/hyper.conf"; }
     mkdir -p "$CF_DIR/ds" 2>/dev/null
     chmod 0777 "$CF_DIR/ds" 2>/dev/null
     cp "$MODDIR/templates/README.txt" "$CF_DIR/使用说明.txt" 2>/dev/null

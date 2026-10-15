@@ -14,6 +14,7 @@
 #   rr on|off|status    刷新率管理开关 / 查看
 #   rr daily <Hz>       设置日用场景锁定的刷新率
 #   rr game <Hz>        设置游戏场景锁定的刷新率
+#   hyper on|off|status 实验功能（CPU/GPU/DDR 全部拉满，仅供跑分）
 # （频率微调请在 WebUI「频率」页操作：全局自定义 custom_freq.conf / 档位覆盖 tier_freq.conf）
 # 用 cd+dirname 取绝对路径：支持「cd 到脚本目录后 sh ctl.sh」这类相对调用
 MODDIR="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
@@ -21,6 +22,7 @@ MODDIR="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
 . "$MODDIR/scripts/util.sh"
 . "$MODDIR/scripts/dsleep.sh"
 . "$MODDIR/scripts/rrate.sh"
+. "$MODDIR/scripts/hyper.sh"
 
 # tier_freq.conf 里的有效覆盖项数。
 # 注意不能写成 `grep -c ... || echo 0`：grep -c 在无匹配时会「打印 0 并返回非零」，
@@ -66,6 +68,7 @@ case "$CMD" in
         else
             echo "刷新率   : 关闭   支持=$(rr_supported)"
         fi
+        echo "实验功能 : $(hy_state_line)"
         echo "cluster0 : A55 上限=$(ppm_khz 0) kHz (节点索引=$_c0)  当前频率=$(cpu_cur 0) kHz  硬件最大=$(cpu_max 0)"
         echo "cluster1 : A78 上限=$(ppm_khz 1) kHz (节点索引=$_c1)  当前频率=$(cpu_cur 1) kHz  硬件最大=$(cpu_max 1)"
         ;;
@@ -221,7 +224,32 @@ case "$CMD" in
                 fi
                 ;;
         esac ;;
+    # ---------------- 实验功能（全部拉满 · 仅供跑分） ----------------
+    hyper)
+        sub="$2"
+        case "$sub" in
+            on|1)
+                hy_conf_set 1
+                if [ -n "$(daemon_pids)" ]; then
+                    echo "实验功能：已开启，守护将在数秒内拉满（覆盖日用/游戏）"
+                else
+                    hy_enter
+                    echo "实验功能：已开启（守护未运行，已直接应用）"
+                fi
+                [ -n "$(hy_fails)" ] && echo "  ! 未完成的项：$(hy_fails)" ;;
+            off|0)
+                hy_conf_set 0
+                [ -f "$HY_MARK" ] && hy_exit
+                echo "实验功能：已关闭，已恢复原来的日用/游戏模式" ;;
+            *)
+                echo "状态     : $(hy_state)"
+                echo "能力     : CPU下限=$(hy_cap cpu)  GPU锁频=$(hy_cap gpu)  DDR锁频=$(hy_cap ddr)   (1=本机可用)"
+                echo "未完成项 : [$(hy_fails)]"
+                echo "节点     : GPU=$(hy_gpu_node)  DDR=$(hy_ddr_node)"
+                echo "配置     : $(grep -vE '^[[:space:]]*(#|$)' "$HY_FILE" 2>/dev/null | tr '\n' ' ')"
+                ;;
+        esac ;;
     *)
-        sed -n '2,24p' "$0"
+        sed -n '2,26p' "$0"
         ;;
 esac

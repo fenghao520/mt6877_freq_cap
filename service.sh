@@ -8,6 +8,7 @@ MODDIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
 . "$MODDIR/scripts/util.sh"
 . "$MODDIR/scripts/dsleep.sh"
 . "$MODDIR/scripts/rrate.sh"
+. "$MODDIR/scripts/hyper.sh"
 
 # 等待开机完成
 i=0
@@ -33,6 +34,11 @@ ds_cleanup
 # 刷新率残留还原：settings 是持久化数据，上次若没走完还原流程，
 # 开机必须照快照补还原，否则刷新率会一直被锁在上次的值上。
 rr_cleanup
+
+# 实验功能残留还原：上次若是「满血状态下断电/强杀」，开机必须交还，
+# 否则起手就是 CPU 贴死 + GPU/DDR 锁最高档 —— 烫得快还没人知道为什么。
+# （顺序很重要：先清理再起守护，守护看到 enable=1 会用那时的状态重新快照。）
+hy_cleanup
 
 kill_daemon
 
