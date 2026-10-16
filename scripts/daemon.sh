@@ -117,6 +117,7 @@ log_line() { # screen fg scene mode c0 c1 [disabled]
         echo "hycpu=$HYC_CPU"
         echo "hyfail=$(hy_fails)"
         echo "hyfix=$(hy_fixes)"
+        echo "rrerr=$RR_ERR"
     } > "$STATE_FILE.tmp" 2>/dev/null
     chmod 0644 "$STATE_FILE.tmp" 2>/dev/null
     mv -f "$STATE_FILE.tmp" "$STATE_FILE" 2>/dev/null \
@@ -194,7 +195,14 @@ process_cmd() {
             rrgame=*)  rr_conf_set game  "${line#rrgame=}"  ;;
             # ---- 实验功能（全部拉满）----
             hyper=*)   hy_conf_set "${line#hyper=}" ;;
-            stop)    ds_exit; rr_drop; hy_exit; ppm_release; rm -f "$DAEMON_PID_FILE" 2>/dev/null; exit 0 ;;
+            stop)
+                # 只还原模块确实接管过的 Doze 状态；无快照时不能替用户 unforce。
+                if [ -f "$DS_ACT" ] || [ -f "$DS_SAVED" ]; then ds_exit; fi
+                rr_handback
+                hy_cleanup
+                ppm_release
+                rm -f "$DAEMON_PID_FILE" 2>/dev/null
+                exit 0 ;;
         esac
     done < "$_snap"
     rm -f "$_snap" 2>/dev/null
@@ -247,6 +255,10 @@ while true; do
     if ! screen_on; then
         if [ "$RELEASED" != "1" ]; then
             ppm_release
+            # 满血模式要把下限、GPU、DDR 一并交还；仅放开 max 会让 CPU 仍贴着高 min，
+            # GPU/DDR 也继续锁最高档，待机功耗和发热都下不来。配置开关保持开启，
+            # 亮屏后 hy_mark 已清，hyper 分支会重新应用并重新快照。
+            if [ -f "$HY_MARK" ]; then hy_exit; fi
             RELEASED=1
             NEED_REAPPLY=1   # 不用清 LAST_SIG：亮屏时再清，避免手动的「恢复不限」被熄屏顺带取消
             rr_drop          # 熄屏时锁刷新率没意义，交还系统让息屏显示/低功耗自己决定

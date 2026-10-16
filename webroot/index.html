@@ -554,7 +554,7 @@
       <div class="card about">
         <h2><span class="bar"></span>关于</h2>
         <div class="kv"><span class="k">模块</span><span class="v">天玑920限频</span></div>
-        <div class="kv"><span class="k">版本</span><span class="v" id="ab-ver">v1.2.5</span></div>
+        <div class="kv"><span class="k">版本</span><span class="v" id="ab-ver">v1.2.6</span></div>
         <div class="kv"><span class="k">目标 SoC</span><span class="v">MT6877 天玑920</span></div>
         <div class="kv"><span class="k">控制通道</span><span class="v">/proc/ppm/policy/*</span></div>
         <div class="kv"><span class="k">配置目录</span><span class="v">/sdcard/Android/<br>mt6877_freq_cap</span></div>
@@ -756,7 +756,7 @@ let __lastState='';   // 最近一次成功读到的 state.conf（读取偶发�
 /* 深度睡眠 */
 let __ds=false,__dsact=false,__dswhite='',__dsw='',__dswunit='alarm',__dsgrace=20,__apps=null,__appsTs=0;
 /* 刷新率 */
-let __rren=false,__rrdaily=60,__rrgame=120,__rrheld='',__rrnow='',__rrsup='60,120';
+let __rren=false,__rrdaily=60,__rrgame=120,__rrheld='',__rrnow='',__rrsup='60,120',__rrerr='';
 let __warn='';   // 守护上报的告警（如 ppm_write_fail）
 /* 实验功能（全部拉满） */
 let __hy=false,__hycpu='0',__hygpu='0',__hyddr='0',__hyfail='',__hyfix=0;
@@ -773,7 +773,7 @@ function renderState(o){
   if(o.dswunit==='wake'||o.dswunit==='alarm')__dswunit=o.dswunit;
   {const g=Number(o.dsgrace);if(g>=5)__dsgrace=g;}
   /* 刷新率 + 告警 */
-  __rren=o.rren==='1';__rrheld=o.rrheld||'';__rrnow=o.rrnow||'';__warn=o.warn||'';
+  __rren=o.rren==='1';__rrheld=o.rrheld||'';__rrnow=o.rrnow||'';__warn=o.warn||'';__rrerr=o.rrerr||'';
   {const d=Number(o.rrdaily);if(d>0)__rrdaily=d;
    const g2=Number(o.rrgame);if(g2>0)__rrgame=g2;}
   if(o.rrsup)__rrsup=o.rrsup;
@@ -1189,6 +1189,7 @@ function renderRr(){
       ? '<span class="badge on">已启用</span> 日用 '+__rrdaily+' Hz ／ 游戏 '+__rrgame+' Hz · '
         +(__rrheld?('当前锁定 '+__rrheld+' Hz'):'当前已交还系统（熄屏中或等待下一轮）')
         +(__rrnow?('　实际生效 '+__rrnow+' Hz'):'')
+        +(__rrerr?('<br><b style="color:var(--rd)">⚠ 接管失败：'+esc(__rrerr)+' —— 未修改系统设置，请确认存储空间后重试。</b>'):'')
       : '';
   }
 

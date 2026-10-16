@@ -106,7 +106,7 @@ rr_supported() { # 本机支持的档位，升序逗号分隔（如 60,120）
         | sort -n -u | tr '\n' ',' | sed 's/,$//'
 }
 
-_rr_put() { # 值(空或null=删除) 键名
+_rr_put() { # 值(null=删除) 键名
     if [ -z "$1" ] || [ "$1" = "null" ]; then
         settings delete system "$2" >/dev/null 2>&1
     else
@@ -114,18 +114,56 @@ _rr_put() { # 值(空或null=删除) 键名
     fi
 }
 
-# 快照原值。只记一次 —— 否则第二次会把自己设的值当成「原值」，再也还原不回去。
+RR_ERR=""   # 快照/写入失败原因，导出到 state.conf 供 WebUI 明示
+
+_rr_valid_value() { # settings get 的有效返回：数字/小数或 null（表示原本未设置）
+    case "$1" in
+        null) return 0 ;;
+        ''|*[!0-9.]*) return 1 ;;
+        *[0-9]*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+_rr_snapshot_valid() { # 文件必须含有效 min 与 peak 两个原值
+    local f="$1" mn pk
+    [ -s "$f" ] || return 1
+    mn="$(sed -n 's/^min=//p' "$f" 2>/dev/null | head -n1 | tr -d ' \t\r\n')"
+    pk="$(sed -n 's/^peak=//p' "$f" 2>/dev/null | head -n1 | tr -d ' \t\r\n')"
+    _rr_valid_value "$mn" && _rr_valid_value "$pk"
+}
+
+# 快照原值。只记一次 —— 否则第二次会把自己设的值当成「原值」。
+# **失败就拒绝接管**：settings 是持久化状态，没有成功落盘的原值快照，
+# 之后就无法安全还原；不能再像旧实现那样吞掉 mv 失败、照样改 min/peak。
 rr_snapshot() {
-    [ -f "$RR_SAVED" ] && return 0
-    mkdir -p "$CF_DIR" 2>/dev/null
-    {
-        echo "ts=$(date +%s)"
-        echo "min=$(settings get system min_refresh_rate 2>/dev/null | tr -d ' \t\r\n')"
-        echo "peak=$(settings get system peak_refresh_rate 2>/dev/null | tr -d ' \t\r\n')"
-    } > "$RR_SAVED.tmp" 2>/dev/null
-    chmod 0666 "$RR_SAVED.tmp" 2>/dev/null
-    mv -f "$RR_SAVED.tmp" "$RR_SAVED" 2>/dev/null
-    chmod 0666 "$RR_SAVED" 2>/dev/null
+    local mn pk tmp="$RR_SAVED.tmp"
+    if [ -f "$RR_SAVED" ]; then
+        if _rr_snapshot_valid "$RR_SAVED"; then RR_ERR=""; return 0; fi
+        RR_ERR="snapshot_invalid"
+        return 1
+    fi
+    mkdir -p "$CF_DIR" 2>/dev/null || { RR_ERR="snapshot_unwritable"; return 1; }
+    mn="$(settings get system min_refresh_rate 2>/dev/null | tr -d ' \t\r\n')"
+    pk="$(settings get system peak_refresh_rate 2>/dev/null | tr -d ' \t\r\n')"
+    if ! _rr_valid_value "$mn" || ! _rr_valid_value "$pk"; then
+        RR_ERR="snapshot_read_failed"
+        return 1
+    fi
+    if ! printf 'ts=%s\nmin=%s\npeak=%s\n' "$(date +%s)" "$mn" "$pk" > "$tmp" 2>/dev/null; then
+        rm -f "$tmp" 2>/dev/null
+        RR_ERR="snapshot_write_failed"
+        return 1
+    fi
+    chmod 0666 "$tmp" 2>/dev/null || { rm -f "$tmp" 2>/dev/null; RR_ERR="snapshot_chmod_failed"; return 1; }
+    mv -f "$tmp" "$RR_SAVED" 2>/dev/null || { rm -f "$tmp" 2>/dev/null; RR_ERR="snapshot_rename_failed"; return 1; }
+    chmod 0666 "$RR_SAVED" 2>/dev/null || { RR_ERR="snapshot_chmod_failed"; return 1; }
+    if ! _rr_snapshot_valid "$RR_SAVED"; then
+        rm -f "$RR_SAVED" 2>/dev/null
+        RR_ERR="snapshot_verify_failed"
+        return 1
+    fi
+    RR_ERR=""
     return 0
 }
 
@@ -148,12 +186,23 @@ rr_take() { # hz
     case "$hz" in *[!0-9]*) return 1 ;; esac
     cur="$(rr_holding)"
     [ "$cur" = "$hz" ] && return 0
-    rr_snapshot
-    _rr_put "$hz" peak_refresh_rate
-    _rr_put "$hz" min_refresh_rate
-    printf '%s' "$hz" > "$RR_HELD.tmp" 2>/dev/null
-    mv -f "$RR_HELD.tmp" "$RR_HELD" 2>/dev/null
-    chmod 0666 "$RR_HELD" 2>/dev/null
+    # 无法得到完整快照时绝不写系统设置。
+    rr_snapshot || return 1
+    # min/peak 任一写入失败，都立即按快照回滚；RR_SAVED 保留供下一轮重试。
+    if ! _rr_put "$hz" peak_refresh_rate || ! _rr_put "$hz" min_refresh_rate; then
+        rr_release
+        RR_ERR="settings_write_failed"
+        return 1
+    fi
+    if ! printf '%s' "$hz" > "$RR_HELD.tmp" 2>/dev/null \
+       || ! mv -f "$RR_HELD.tmp" "$RR_HELD" 2>/dev/null; then
+        rm -f "$RR_HELD.tmp" 2>/dev/null
+        rr_release
+        RR_ERR="held_marker_failed"
+        return 1
+    fi
+    chmod 0666 "$RR_HELD" 2>/dev/null || { rr_release; RR_ERR="held_marker_failed"; return 1; }
+    RR_ERR=""
     return 0
 }
 

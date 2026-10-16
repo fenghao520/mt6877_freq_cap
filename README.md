@@ -11,7 +11,7 @@
 ![platform](https://img.shields.io/badge/SoC-MediaTek%20MT6877-1565C0?style=flat-square)
 ![root](https://img.shields.io/badge/root-KernelSU-00897B?style=flat-square)
 ![android](https://img.shields.io/badge/Android-16-3DDC84?style=flat-square)
-![version](https://img.shields.io/badge/version-v1.2.5-0288D1?style=flat-square)
+![version](https://img.shields.io/badge/version-v1.2.6-0288D1?style=flat-square)
 
 </div>
 
@@ -94,7 +94,7 @@
 
 ## 安装
 
-1. 下载 [Releases](../../releases) 里的 `mt6877_freq_cap_v1.2.5.zip`
+1. 下载 [Releases](../../releases) 里的 `mt6877_freq_cap_v1.2.6.zip`
 2. KernelSU 管理器 → 模块 → 从本地安装 → 选这个 zip
 3. **重启手机**（KernelSU 装完必须重启才真正生效，否则 `modules` 和 `modules_update` 会同时存在两个版本）
 4. 重启后在 KernelSU 管理器点本模块的「打开 WebUI」开始配置
@@ -377,6 +377,19 @@ mt6877_freq_cap/
 ---
 
 ## 变更记录
+
+### v1.2.6
+
+修三项清理与快照缺陷（实机验证通过）：
+
+- **熄屏交还满血**：实验功能开启时，熄屏会一并释放 CPU 下限、GPU 固定、DDR 锁定。
+  此前只放开 CPU 上限，GPU/DDR 仍在生效，待机功耗与发热下不来。
+- **`ctl.sh stop` 清理完整**：改为先让守护优雅处理再兜底清理，
+  与 WebUI 停止路径一致；深睡 Doze、刷新率、GPU/DDR 不再残留。
+- **快照写失败不再改系统设置**：`min/peak_refresh_rate` 等持久化设置的快照失败时
+  直接拒绝接管并报错（WebUI 红字提示），不再出现「改了却无法还原」。
+
+限频与深睡的核心逻辑未改动。
 
 ### v1.2.5
 

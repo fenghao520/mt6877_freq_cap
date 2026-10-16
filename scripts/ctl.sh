@@ -136,8 +136,23 @@ case "$CMD" in
         echo "守护状态: $([ -n "$(daemon_pids)" ] && echo 运行中 || echo 未运行)"
         ;;
     stop)
-        kill_daemon; ppm_release
-        echo "已停止守护并恢复不限"
+        # 停守护的入口必须和 daemon 命令分支一样先交还所有被接管的系统状态。
+        # 之前只 kill + ppm_release，会让深睡、刷新率、实验模式的持久/运行时
+        # 状态留在系统里；这里只能靠重新启动守护或重启手机才能恢复。
+        if [ -n "$(daemon_pids)" ]; then
+            echo stop >> "$CMD_FILE" 2>/dev/null
+            # 守护最多会睡到夜间 10 秒巡检点；给足时间优雅处理命令。
+            n=0
+            while [ -n "$(daemon_pids)" ] && [ "$n" -lt 15 ]; do sleep 1; n=$((n + 1)); done
+        fi
+        # 若守护仍活着，先杀掉再由 ctl 做兜底，避免守护与本进程并发写恢复值。
+        [ -n "$(daemon_pids)" ] && kill_daemon
+        # 只还原有快照/活动标记的 Doze 接管；没有证据时不 unforce 用户自己的状态。
+        if [ -f "$DS_ACT" ] || [ -f "$DS_SAVED" ]; then ds_cleanup; fi
+        rr_cleanup
+        hy_cleanup
+        ppm_release
+        echo "已停止守护并恢复系统设置"
         ;;
     # ---------------- 深度睡眠 ----------------
     ds)
